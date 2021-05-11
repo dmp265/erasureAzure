@@ -76,10 +76,10 @@ GNU licenses can be found at http://www.gnu.org/licenses/.
 //   -------------    POSIX DEFINITIONS    -------------
 
 // NOTE -- make sure to adjust SFX_PADDING if changing any SFX strings!
-#define SFX_PADDING 14         // number of extra chars required to fit any suffix combo
-#define WRITE_SFX ".partial"   // 8 characters
-#define REBUILD_SFX ".rebuild" // 8 characters
-#define META_SFX ".meta"       // 5 characters (in ADDITION to other suffixes!)
+#define SFX_PADDING 14                  // number of extra chars required to fit any suffix combo
+char *WRITE_SFX = (char *)".partial";   // 8 characters
+char *REBUILD_SFX = (char *)".rebuild"; // 8 characters
+char *META_SFX = (char *)".meta";       // 5 characters (in ADDITION to other suffixes!)
 
 #define IO_SIZE 1048576 // Preferred I/O Size
 
@@ -317,7 +317,7 @@ static int expand_dir_template(POSIX_DAL_CTXT dctxt, POSIX_BLOCK_CTXT bctxt, DAL
 
    // allocate string to hold the dirpath
    // NOTE -- allocation size is an estimate, based on the above pod/block/cap/scat limits
-   bctxt->filepath = malloc(sizeof(char) * (dctxt->tmplen + dctxt->dirpad + strlen(objID) + SFX_PADDING + 1));
+   bctxt->filepath = (char *)malloc(sizeof(char) * (dctxt->tmplen + dctxt->dirpad + strlen(objID) + SFX_PADDING + 1));
 
    // parse through the directory template string, populating filepath as we go
    const char *parse = dctxt->dirtmp;
@@ -481,7 +481,7 @@ static char *convert_relative(char *oldpath, char *newpath)
    }
 
    // allocate space for our return string
-   char *result = malloc(sizeof(char) * (3 * nBack + strlen(oldpath) + 1));
+   char *result = (char *)malloc(sizeof(char) * (3 * nBack + strlen(oldpath) + 1));
    if (result == NULL)
    {
       return NULL;
@@ -588,7 +588,7 @@ int manual_migrate(POSIX_DAL_CTXT dctxt, const char *objID, DAL_location src, DA
    {
       return -1;
    }
-   char *meta_buf = malloc(IO_SIZE);
+   char *meta_buf = (char *)malloc(IO_SIZE);
    if (meta_buf == NULL)
    {
       free(data_buf);
@@ -750,7 +750,7 @@ int posix_verify(DAL_CTXT ctxt, char fix)
          num_err++;
       }
    }
-   char *path = malloc(sizeof(char) * (dctxt->tmplen + dctxt->dirpad + SFX_PADDING + 1));
+   char *path = (char *)malloc(sizeof(char) * (dctxt->tmplen + dctxt->dirpad + SFX_PADDING + 1));
    DAL_location loc = {.pod = 0, .block = 0, .cap = 0, .scatter = 0};
    DAL_location loc_flags = {.pod = 0, .block = 0, .cap = 0, .scatter = 0};
    expand_path(dctxt->dirtmp, path, dctxt->max_loc, &loc_flags, 1);
@@ -811,12 +811,12 @@ int posix_migrate(DAL_CTXT ctxt, const char *objID, DAL_location src, DAL_locati
    }
    POSIX_DAL_CTXT dctxt = (POSIX_DAL_CTXT)ctxt; // should have been passed a posix context
 
-   POSIX_BLOCK_CTXT srcctxt = malloc(sizeof(struct posix_block_context_struct));
+   POSIX_BLOCK_CTXT srcctxt = (POSIX_BLOCK_CTXT)malloc(sizeof(struct posix_block_context_struct));
    if (srcctxt == NULL)
    {
       return -1; // malloc will set errno
    }
-   POSIX_BLOCK_CTXT destctxt = malloc(sizeof(struct posix_block_context_struct));
+   POSIX_BLOCK_CTXT destctxt = (POSIX_BLOCK_CTXT)malloc(sizeof(struct posix_block_context_struct));
    if (destctxt == NULL)
    {
       free(srcctxt);
@@ -1025,7 +1025,7 @@ int posix_del(DAL_CTXT ctxt, DAL_location location, const char *objID)
    POSIX_DAL_CTXT dctxt = (POSIX_DAL_CTXT)ctxt; // should have been passed a posix context
 
    // allocate space for a new BLOCK context
-   POSIX_BLOCK_CTXT bctxt = malloc(sizeof(struct posix_block_context_struct));
+   POSIX_BLOCK_CTXT bctxt = (POSIX_BLOCK_CTXT)malloc(sizeof(struct posix_block_context_struct));
    if (bctxt == NULL)
    {
       return -1;
@@ -1055,7 +1055,7 @@ int posix_stat(DAL_CTXT ctxt, DAL_location location, const char *objID)
    POSIX_DAL_CTXT dctxt = (POSIX_DAL_CTXT)ctxt; // should have been passed a posix context
 
    // allocate space for a new BLOCK context
-   POSIX_BLOCK_CTXT bctxt = malloc(sizeof(struct posix_block_context_struct));
+   POSIX_BLOCK_CTXT bctxt = (POSIX_BLOCK_CTXT)malloc(sizeof(struct posix_block_context_struct));
    if (bctxt == NULL)
    {
       return -1;
@@ -1105,7 +1105,7 @@ BLOCK_CTXT posix_open(DAL_CTXT ctxt, DAL_MODE mode, DAL_location location, const
    POSIX_DAL_CTXT dctxt = (POSIX_DAL_CTXT)ctxt; // should have been passed a posix context
 
    // allocate space for a new BLOCK context
-   POSIX_BLOCK_CTXT bctxt = malloc(sizeof(struct posix_block_context_struct));
+   POSIX_BLOCK_CTXT bctxt = (POSIX_BLOCK_CTXT)malloc(sizeof(struct posix_block_context_struct));
    if (bctxt == NULL)
    {
       return NULL;
@@ -1246,7 +1246,7 @@ int posix_set_meta(BLOCK_CTXT ctxt, const char *meta_buf, size_t size)
    POSIX_BLOCK_CTXT bctxt = (POSIX_BLOCK_CTXT)ctxt; // should have been passed a posix context
 
    // write the provided buffer out to the sidecar file
-   if (write(bctxt->mfd, meta_buf, size) != size)
+   if (write(bctxt->mfd, meta_buf, size) != (ssize_t)size)
    {
       LOG(LOG_ERR, "failed to write buffer to meta file: \"%s\" (%s)\n", bctxt->filepath, strerror(errno));
       return -1;
@@ -1279,7 +1279,7 @@ int posix_put(BLOCK_CTXT ctxt, const void *buf, size_t size)
    POSIX_BLOCK_CTXT bctxt = (POSIX_BLOCK_CTXT)ctxt; // should have been passed a posix context
 
    // just a write to our pre-opened FD
-   if (write(bctxt->fd, buf, size) != size)
+   if (write(bctxt->fd, buf, size) != (ssize_t)size)
    {
       LOG(LOG_ERR, "write to \"%s\" failed (%s)\n", bctxt->filepath, strerror(errno));
       return -1;
@@ -1509,7 +1509,7 @@ DAL posix_dal_init(xmlNode *root, DAL_location max_loc)
       {
 
          // allocate space for our context struct
-         POSIX_DAL_CTXT dctxt = malloc(sizeof(struct posix_dal_context_struct));
+         POSIX_DAL_CTXT dctxt = (POSIX_DAL_CTXT)malloc(sizeof(struct posix_dal_context_struct));
          if (dctxt == NULL)
          {
             return NULL;
@@ -1567,7 +1567,7 @@ DAL posix_dal_init(xmlNode *root, DAL_location max_loc)
 
          dctxt->sec_root = -1;
          errno = EINVAL;
-         char *sec_root_path = "not found";
+         char *sec_root_path = (char *)"not found";
 
          // find the secure root node and io size
          while (root != NULL)
@@ -1603,7 +1603,7 @@ DAL posix_dal_init(xmlNode *root, DAL_location max_loc)
          }
 
          // allocate and populate a new DAL structure
-         DAL pdal = malloc(sizeof(struct DAL_struct));
+         DAL pdal = (DAL)malloc(sizeof(struct DAL_struct));
          if (pdal == NULL)
          {
             LOG(LOG_ERR, "failed to allocate space for a DAL_struct\n");

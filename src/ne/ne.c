@@ -304,7 +304,7 @@ int terminate_thread(ioblock **iobref, ThreadQueue tq, gthread_state *state, ne_
 ne_handle allocate_handle(ne_ctxt ctxt, const char *objID, ne_location loc, meta_info *consensus)
 {
    // create the handle structure itself
-   ne_handle handle = calloc(1, sizeof(struct ne_handle_struct));
+   ne_handle handle = (ne_handle)calloc(1, sizeof(struct ne_handle_struct));
    if (handle == NULL)
    {
       LOG(LOG_ERR, "Failed to allocate space for a ne_handle structure!\n");
@@ -346,7 +346,7 @@ ne_handle allocate_handle(ne_ctxt ctxt, const char *objID, ne_location loc, meta
    //      free( handle );
    //      return NULL;
    //   }
-   handle->iob = calloc(num_blocks, sizeof(ioblock *));
+   handle->iob = (ioblock **)calloc(num_blocks, sizeof(ioblock *));
    if (handle->iob == NULL)
    {
       LOG(LOG_ERR, "Failed to allocate space for ioblock references!\n");
@@ -354,7 +354,7 @@ ne_handle allocate_handle(ne_ctxt ctxt, const char *objID, ne_location loc, meta
       free(handle);
       return NULL;
    }
-   handle->thread_queues = calloc(num_blocks, sizeof(ThreadQueue));
+   handle->thread_queues = (ThreadQueue *)calloc(num_blocks, sizeof(ThreadQueue));
    if (handle->thread_queues == NULL)
    {
       LOG(LOG_ERR, "Failed to allocate space for thread_queues!\n");
@@ -363,7 +363,7 @@ ne_handle allocate_handle(ne_ctxt ctxt, const char *objID, ne_location loc, meta
       free(handle);
       return NULL;
    }
-   handle->thread_states = calloc(num_blocks, sizeof(struct global_state_struct));
+   handle->thread_states = (gthread_state *)calloc(num_blocks, sizeof(struct global_state_struct));
    if (handle->thread_states == NULL)
    {
       LOG(LOG_ERR, "Failed to allocate space for global thread state structs!\n");
@@ -373,7 +373,7 @@ ne_handle allocate_handle(ne_ctxt ctxt, const char *objID, ne_location loc, meta
       free(handle);
       return NULL;
    }
-   handle->prev_in_err = calloc(num_blocks, sizeof(char));
+   handle->prev_in_err = (unsigned char *)calloc(num_blocks, sizeof(char));
    if (handle->prev_in_err == NULL)
    {
       LOG(LOG_ERR, "Failed to allocate space for a prev_error array!\n");
@@ -384,7 +384,7 @@ ne_handle allocate_handle(ne_ctxt ctxt, const char *objID, ne_location loc, meta
       free(handle);
       return NULL;
    }
-   handle->decode_index = calloc(num_blocks, sizeof(char));
+   handle->decode_index = (unsigned char *)calloc(num_blocks, sizeof(char));
    if (handle->decode_index == NULL)
    {
       LOG(LOG_ERR, "Failed to allocate space for a decode_index array!\n");
@@ -397,7 +397,7 @@ ne_handle allocate_handle(ne_ctxt ctxt, const char *objID, ne_location loc, meta
       return NULL;
    }
    /* allocate matrices */
-   handle->encode_matrix = calloc(num_blocks * consensus->N, sizeof(char));
+   handle->encode_matrix = (unsigned char *)calloc(num_blocks * consensus->N, sizeof(char));
    if (handle->encode_matrix == NULL)
    {
       LOG(LOG_ERR, "Failed to allocate space for an encode_matrix!\n");
@@ -410,7 +410,7 @@ ne_handle allocate_handle(ne_ctxt ctxt, const char *objID, ne_location loc, meta
       free(handle);
       return NULL;
    }
-   handle->decode_matrix = calloc(num_blocks * consensus->N, sizeof(char));
+   handle->decode_matrix = (unsigned char *)calloc(num_blocks * consensus->N, sizeof(char));
    if (handle->decode_matrix == NULL)
    {
       LOG(LOG_ERR, "Failed to allocate space for a decode_matrix!\n");
@@ -424,7 +424,7 @@ ne_handle allocate_handle(ne_ctxt ctxt, const char *objID, ne_location loc, meta
       free(handle);
       return NULL;
    }
-   handle->invert_matrix = calloc(num_blocks * consensus->N, sizeof(char));
+   handle->invert_matrix = (unsigned char *)calloc(num_blocks * consensus->N, sizeof(char));
    if (handle->invert_matrix == NULL)
    {
       LOG(LOG_ERR, "Failed to allocate space for an invert_matrix!\n");
@@ -439,7 +439,7 @@ ne_handle allocate_handle(ne_ctxt ctxt, const char *objID, ne_location loc, meta
       free(handle);
       return NULL;
    }
-   handle->g_tbls = calloc(consensus->N * consensus->E * 32, sizeof(char));
+   handle->g_tbls = (unsigned char *)calloc(consensus->N * consensus->E * 32, sizeof(char));
    if (handle->g_tbls == NULL)
    {
       LOG(LOG_ERR, "Failed to allocate space for g_tbls!\n");
@@ -539,7 +539,7 @@ void free_handle(ne_handle handle)
 int check_matches(meta_info **minfo_structs, int num_blocks, int max_blocks, meta_info *ret_buf)
 {
    // allocate space for ALL match arrays
-   int *N_match = calloc(7, sizeof(int) * num_blocks);
+   int *N_match = (int *)calloc(7, sizeof(int) * num_blocks);
    if (N_match == NULL)
    {
       LOG(LOG_ERR, "Failed to allocate space for match count arrays!\n");
@@ -711,7 +711,7 @@ int read_stripes(ne_handle handle)
    int cur_block;
    int stripecnt = 0;
    int nstripe_errors = 0;
-   for (cur_block = 0; (cur_block < (N + nstripe_errors) || cur_block < (N + handle->ethreads_running)) && cur_block < (N + E); cur_block++)
+   for (cur_block = 0; (cur_block < (N + nstripe_errors) || cur_block < (N + (signed)handle->ethreads_running)) && cur_block < (N + E); cur_block++)
    {
       // check if we can even handle however many errors we've hit so far
       if (nstripe_errors > E)
@@ -721,7 +721,7 @@ int read_stripes(ne_handle handle)
          return -1;
       }
       // if this thread isn't running, we need to start it
-      if (cur_block >= N + handle->ethreads_running)
+      if (cur_block >= N + (signed)handle->ethreads_running)
       {
          LOG(LOG_INFO, "Starting up thread %d to cope with errors beyond stripe %d\n", cur_block, start_stripe);
          // first, make sure to empty any ioblocks still on the queue
@@ -762,7 +762,7 @@ int read_stripes(ne_handle handle)
       // make sure our stripecnt is logical
       if (stripecnt)
       {
-         if ((cur_iob->data_size / partsz) != stripecnt)
+         if (((signed)cur_iob->data_size / partsz) != stripecnt)
          {
             LOG(LOG_ERR, "Detected a ioblock of size %zd from block %d which conflicts with stripe count of %d!\n",
                 cur_iob->data_size, cur_block, stripecnt);
@@ -783,10 +783,10 @@ int read_stripes(ne_handle handle)
    if (handle->mode == NE_RDONLY)
    {
       // keep the greater of how many erasure threads we've needed in the last couple of stripes...
-      if (nstripe_errors > handle->prev_err_cnt)
+      if ((unsigned)nstripe_errors > handle->prev_err_cnt)
          handle->prev_err_cnt = nstripe_errors;
       // ...and halt all others
-      for (cur_block = (N + nstripe_errors); cur_block < (N + handle->prev_err_cnt); cur_block++)
+      for (cur_block = (N + nstripe_errors); cur_block < (N + (signed)handle->prev_err_cnt); cur_block++)
       {
          LOG(LOG_INFO, "Setting HALT state for unneded thread %d\n", cur_block);
          if (tq_set_flags(handle->thread_queues[cur_block], TQ_HALT))
@@ -807,13 +807,13 @@ int read_stripes(ne_handle handle)
    if (nstripe_errors)
    {
       // create some erasure structs
-      unsigned char *stripe_in_err = calloc(N + E, sizeof(unsigned char));
+      unsigned char *stripe_in_err = (unsigned char *)calloc(N + E, sizeof(unsigned char));
       if (stripe_in_err == NULL)
       {
          LOG(LOG_ERR, "Failed to allocate space for a stripe_in_err array!\n");
          return -1;
       }
-      unsigned char *stripe_err_list = calloc(N + E, sizeof(unsigned char));
+      unsigned char *stripe_err_list = (unsigned char *)calloc(N + E, sizeof(unsigned char));
       if (stripe_err_list == NULL)
       {
          LOG(LOG_ERR, "Failed to allocate space for a stripe_err_list array!\n");
@@ -863,7 +863,7 @@ int read_stripes(ne_handle handle)
             // Generate g_tbls from encode matrix
             ec_init_tables(N, E, &(handle->encode_matrix[N * N]), handle->g_tbls);
 
-            unsigned char *tmpmatrix = calloc((N + E) * (N + E), sizeof(unsigned char));
+            unsigned char *tmpmatrix = (unsigned char *)calloc((N + E) * (N + E), sizeof(unsigned char));
             if (tmpmatrix == NULL)
             {
                LOG(LOG_ERR, "Failed to allocate space for a tmpmatrix!\n");
@@ -896,7 +896,7 @@ int read_stripes(ne_handle handle)
          }
 
          // as this struct will change depending on the head position of our queues, we must generate here
-         unsigned char **recov = calloc(N + E, sizeof(unsigned char *));
+         unsigned char **recov = (unsigned char **)calloc(N + E, sizeof(unsigned char *));
          if (recov == NULL)
          {
             LOG(LOG_ERR, "Failed to allocate space for a recovery array!\n");
@@ -909,10 +909,10 @@ int read_stripes(ne_handle handle)
          {
             //BufferQueue* bq = &handle->blocks[handle->decode_index[cur_block]];
             //recov[cur_block] = bq->buffers[ bq->head ];
-            recov[cur_block] = handle->iob[handle->decode_index[cur_block]]->buff + stripe_start;
+            recov[cur_block] = (unsigned char *)(stripe_start + (char *)handle->iob[handle->decode_index[cur_block]]->buff);
          }
 
-         unsigned char **temp_buffs = calloc(nstripe_errors, sizeof(unsigned char *));
+         unsigned char **temp_buffs = (unsigned char **)calloc(nstripe_errors, sizeof(unsigned char *));
          if (temp_buffs == NULL)
          {
             LOG(LOG_ERR, "Failed to allocate space for a temp_buffs array!\n");
@@ -928,7 +928,7 @@ int read_stripes(ne_handle handle)
             //temp_buffs[ cur_block ] = bq->buffers[ bq->head ];
 
             // assign storage locations for the repaired buffers to be on top of the faulty buffers
-            temp_buffs[cur_block] = handle->iob[stripe_err_list[cur_block]]->buff + stripe_start;
+            temp_buffs[cur_block] = (unsigned char *)(stripe_start + (char *)handle->iob[stripe_err_list[cur_block]]->buff);
             // as we are regenerating over the bad buffer, mark it as usable from this point on
             handle->iob[stripe_err_list[cur_block]]->error_end = stripe_start;
 
@@ -965,9 +965,9 @@ int read_stripes(ne_handle handle)
 ne_ctxt ne_path_init(const char *path, ne_location max_loc, int max_block)
 {
    // create a stand-in XML config
-   char *configtemplate = "<DAL type=\"posix\"><dir_template>%s</dir_template><sec_root></sec_root></DAL>";
+   char *configtemplate = (char *)"<DAL type=\"posix\"><dir_template>%s</dir_template><sec_root></sec_root></DAL>";
    int len = strlen(path) + strlen(configtemplate);
-   char *xmlconfig = malloc(len);
+   char *xmlconfig = (char *)malloc(len);
    if (xmlconfig == NULL)
    {
       LOG(LOG_ERR, "failed to allocate memory for the stand-in xml config!\n");
@@ -1007,7 +1007,7 @@ ne_ctxt ne_path_init(const char *path, ne_location max_loc, int max_block)
    }
 
    // allocate a context struct
-   ne_ctxt ctxt = malloc(sizeof(struct ne_ctxt_struct));
+   ne_ctxt ctxt = (ne_ctxt)malloc(sizeof(struct ne_ctxt_struct));
    if (ctxt == NULL)
    {
       return NULL;
@@ -1042,7 +1042,7 @@ ne_ctxt ne_init(xmlNode *dal_root, ne_location max_loc, int max_block)
    }
 
    // allocate a new context struct
-   ne_ctxt ctxt = malloc(sizeof(struct ne_ctxt_struct));
+   ne_ctxt ctxt = (ne_ctxt)malloc(sizeof(struct ne_ctxt_struct));
    if (ctxt == NULL)
    {
       LOG(LOG_ERR, "failed to allocate memory for a new ne_ctxt struct!\n");
@@ -1092,7 +1092,10 @@ int ne_delete(ne_ctxt ctxt, const char *objID, ne_location loc)
       return -1;
    }
    int retval = 0;
-   DAL_location dalloc = {.pod = loc.pod, .cap = loc.cap, .scatter = loc.scatter};
+   DAL_location dalloc;
+   dalloc.pod = loc.pod;
+   dalloc.cap = loc.cap;
+   dalloc.scatter = loc.scatter;
    LOG(LOG_INFO, "Deleting object %s (%d blocks)\n", objID, ctxt->max_block);
 
    // loop through and delete all blocks
@@ -1122,7 +1125,7 @@ int ne_delete(ne_ctxt ctxt, const char *objID, ne_location loc)
 ne_handle ne_stat(ne_ctxt ctxt, const char *objID, ne_location loc)
 {
    // allocate space for temporary error arrays
-   char *tmp_meta_errs = calloc(ctxt->max_block * 2, sizeof(char));
+   char *tmp_meta_errs = (char *)calloc(ctxt->max_block * 2, sizeof(char));
    if (tmp_meta_errs == NULL)
    {
       LOG(LOG_ERR, "Failed to allocate space for temporary error arrays!\n");
@@ -1132,14 +1135,14 @@ ne_handle ne_stat(ne_ctxt ctxt, const char *objID, ne_location loc)
 
    // allocate space for a full set of meta_info structs
    meta_info consensus;
-   meta_info *minfo_list = calloc(ctxt->max_block, sizeof(struct meta_info_struct));
+   meta_info *minfo_list = (meta_info *)calloc(ctxt->max_block, sizeof(struct meta_info_struct));
    if (minfo_list == NULL)
    {
       LOG(LOG_ERR, "Failed to allocate space for a meta_info_struct list!\n");
       free(tmp_meta_errs);
       return NULL;
    }
-   meta_info **minfo_refs = calloc(ctxt->max_block, sizeof(meta_info *));
+   meta_info **minfo_refs = (meta_info **)calloc(ctxt->max_block, sizeof(meta_info *));
    if (minfo_refs == NULL)
    {
       LOG(LOG_ERR, "Failed to allocate space for a meta_info refs list!\n");
@@ -1209,7 +1212,7 @@ ne_handle ne_stat(ne_ctxt ctxt, const char *objID, ne_location loc)
    }
 
    // perform sanity checks on the values we've gotten
-   int modeval = NE_STAT;
+   ne_mode modeval = NE_STAT;
    if (consensus.N <= 0)
    {
       modeval = NE_ERR;
@@ -1264,7 +1267,7 @@ ne_handle ne_stat(ne_ctxt ctxt, const char *objID, ne_location loc)
       modeval = NE_ERR;
    }
    // if we have successfully identified all meta values, try to set crcs appropriately
-   if (modeval)
+   if (modeval != NE_ERR)
    {
       for (i = 0; i < curblock; i++)
       {
@@ -1306,7 +1309,7 @@ ne_handle ne_convert_handle(ne_handle handle, ne_mode mode)
 
    // we need to startup some threads
    TQ_Init_Opts tqopts;
-   char *lprefstr = malloc(sizeof(char) * (6 + (handle->ctxt->max_block / 10)));
+   char *lprefstr = (char *)malloc(sizeof(char) * (6 + (handle->ctxt->max_block / 10)));
    if (lprefstr == NULL)
    {
       LOG(LOG_ERR, "Failed to allocate space for TQ log prefix string!\n");
@@ -1314,14 +1317,14 @@ ne_handle ne_convert_handle(ne_handle handle, ne_mode mode)
    }
    tqopts.log_prefix = lprefstr;
    // create a format string for each thread queue
-   char *preffmt = "RQ%d";
+   char *preffmt = (char *)"RQ%d";
    if (mode == NE_REBUILD)
    {
-      preffmt = "RRQ%d";
+      preffmt = (char *)"RRQ%d";
    }
    else if (mode == NE_WRONLY || mode == NE_WRALL)
    {
-      preffmt = "WQ%d";
+      preffmt = (char *)"WQ%d";
    }
    tqopts.init_flags = TQ_HALT; // initialize the threads in a HALTED state (essential for reads, doesn't hurt writes)
    tqopts.max_qdepth = QDEPTH;
@@ -1378,7 +1381,7 @@ ne_handle ne_convert_handle(ne_handle handle, ne_mode mode)
       // only get meta info if it hasn't already been set (totsz is a good example value)
 
       // create a reference array for all of our meta_info structs
-      meta_info **minforefs = calloc(handle->epat.N + handle->epat.E, sizeof(meta_info *));
+      meta_info **minforefs = (meta_info **)calloc(handle->epat.N + handle->epat.E, sizeof(meta_info *));
       if (minforefs == NULL)
       {
          LOG(LOG_ERR, "Failed to allocate space for meta_info references!\n");
@@ -1423,7 +1426,7 @@ ne_handle ne_convert_handle(ne_handle handle, ne_mode mode)
       }
       // check that our erasure pattern matches expected values
       if (consensus.N != handle->epat.N || consensus.E != handle->epat.E ||
-          consensus.O != handle->epat.O || consensus.partsz != handle->epat.partsz)
+          consensus.O != handle->epat.O || (unsigned)consensus.partsz != handle->epat.partsz)
       {
          LOG(LOG_ERR, "Read meta values ( N=%d, E=%d, O=%d, partsz=%zd ) disagree with handle values ( N=%d, E=%d, O=%d, partsz=%zd )!\n",
              consensus.N, consensus.E, consensus.O, consensus.partsz, handle->epat.N, handle->epat.E, handle->epat.O, handle->epat.partsz);
@@ -1478,7 +1481,7 @@ ne_handle ne_convert_handle(ne_handle handle, ne_mode mode)
          break;
       }
       // remove the PAUSE flag, allowing thread to begin processing
-      if (i < handle->epat.N + handle->ethreads_running)
+      if (i < handle->epat.N + (signed)handle->ethreads_running)
       {
          if (tq_unset_flags(handle->thread_queues[i], TQ_HALT))
          {
@@ -1608,7 +1611,7 @@ int ne_close(ne_handle handle, ne_erasure *epat, ne_state *sref)
             return -1;
          }
          LOG(LOG_INFO, "Writing %zu bytes of zero-fill to write handle\n", (stripesz - partstripe));
-         if (ne_write(handle, zerobuff, stripesz - partstripe) != (stripesz - partstripe))
+         if (ne_write(handle, zerobuff, stripesz - partstripe) != (ssize_t)(stripesz - partstripe))
          {
             LOG(LOG_ERR, "Failed to write zero-fill to handle!\n");
             free(zerobuff);
@@ -1918,13 +1921,13 @@ int ne_rebuild(ne_handle handle, ne_erasure *epat, ne_state *sref)
    // NOTE -- a REBUILD handle is 'effectively' a READ handle
    //         However, we now need to spin up write threads to output any repaired data
    // prep structs for output threads
-   ThreadQueue *OutTQs = calloc(N + E, sizeof(ThreadQueue));
+   ThreadQueue *OutTQs = (ThreadQueue *)calloc(N + E, sizeof(ThreadQueue));
    if (OutTQs == NULL)
    {
       LOG(LOG_ERR, "Failed to allocate space for Output ThreadQueues!\n");
       return -1;
    }
-   gthread_state *outstates = calloc(N + E, sizeof(gthread_state));
+   gthread_state *outstates = (gthread_state *)calloc(N + E, sizeof(gthread_state));
    if (outstates == NULL)
    {
       LOG(LOG_ERR, "Failed to allocate space for Output Thread states!\n");
@@ -1932,7 +1935,7 @@ int ne_rebuild(ne_handle handle, ne_erasure *epat, ne_state *sref)
       return -1;
    }
    // allocate space for ioblock references
-   ioblock **outblocks = calloc(N + E, sizeof(ioblock *));
+   ioblock **outblocks = (ioblock **)calloc(N + E, sizeof(ioblock *));
    if (outblocks == NULL)
    {
       LOG(LOG_ERR, "Failed to allocate space for ioblock references!\n");
@@ -1968,7 +1971,7 @@ int ne_rebuild(ne_handle handle, ne_erasure *epat, ne_state *sref)
    }
 
    TQ_Init_Opts tqopts;
-   char *lprefstr = malloc(sizeof(char) * (6 + (handle->ctxt->max_block / 10)));
+   char *lprefstr = (char *)malloc(sizeof(char) * (6 + (handle->ctxt->max_block / 10)));
    if (lprefstr == NULL)
    {
       LOG(LOG_ERR, "Failed to allocate space for TQ log prefix string!\n");
@@ -2096,7 +2099,7 @@ int ne_rebuild(ne_handle handle, ne_erasure *epat, ne_state *sref)
          if (OutTQs[i] != NULL)
          {
             size_t block_cpy = 0;
-            while (block_cpy < handle->iob_datasz)
+            while ((unsigned)block_cpy < handle->iob_datasz)
             {
 
                // check that the current ioblock has room for our data
@@ -2107,7 +2110,7 @@ int ne_rebuild(ne_handle handle, ne_erasure *epat, ne_state *sref)
                   void *tgt = ioblock_write_target(outblocks[i]);
                   // copy caller data into our ioblock
                   LOG(LOG_INFO, "Copying %zu bytes out to block %d\n", partsz, i);
-                  memcpy(tgt, handle->iob[i]->buff + block_cpy, partsz); // no error check, SEGFAULT or nothing
+                  memcpy(tgt, (void *)(block_cpy + (char *)handle->iob[i]->buff), partsz); // no error check, SEGFAULT or nothing
                   block_cpy += partsz;
                   ioblock_update_fill(outblocks[i], partsz, 0);
                }
@@ -2247,7 +2250,7 @@ int ne_rebuild(ne_handle handle, ne_erasure *epat, ne_state *sref)
             handle->thread_states[i].data_error = 0;
             // populate a tqopts
             TQ_Init_Opts opts;
-            opts.log_prefix = malloc(sizeof(char) * (6 + i / 10));
+            opts.log_prefix = (char *)malloc(sizeof(char) * (6 + i / 10));
             if (opts.log_prefix == NULL)
             {
                LOG(LOG_ERR, "Failed to allocate space for a log_prefix string!\n");
@@ -2324,7 +2327,7 @@ off_t ne_seek(ne_handle handle, off_t offset)
       return -1;
    }
 
-   if (offset > handle->totsz)
+   if (offset > (signed)handle->totsz)
    {
       offset = handle->totsz;
       LOG(LOG_WARNING, "Seek offset extends beyond EOF, resizing read request to %zu\n", offset);
@@ -2352,7 +2355,7 @@ off_t ne_seek(ne_handle handle, off_t offset)
       LOG(LOG_INFO, "New offset of %zd will require threads to reseek\n", offset);
       //      off_t new_iob_off = -1;
       int i;
-      for (i = 0; i < (N + handle->ethreads_running); i++)
+      for (i = 0; i < (N + (signed)handle->ethreads_running); i++)
       {
          // first, pause this thread
          if (tq_set_flags(handle->thread_queues[i], TQ_HALT))
@@ -2442,7 +2445,7 @@ off_t ne_seek(ne_handle handle, off_t offset)
          //         }
       }
       // catch any error conditions by checking our index
-      if (i != (N + handle->ethreads_running))
+      if (i != (N + (signed)handle->ethreads_running))
       {
          handle->mode = NE_ERR; // make sure that no one tries to reuse this broken handle!
          errno = EBADF;
@@ -2579,7 +2582,7 @@ ssize_t ne_read(ne_handle handle, void *buffer, size_t bytes)
       {
          ioblock *cur_iob = handle->iob[cur_block];
          // make sure the ioblock has sufficient data
-         if ((cur_iob->data_size - (cur_stripe * partsz)) < partsz)
+         if ((signed)(cur_iob->data_size - (cur_stripe * partsz)) < partsz)
          {
             LOG(LOG_ERR, "Ioblock at position %d of stripe %d is subsized (%zu)!\n", cur_block, cur_stripe + iob_stripe, cur_iob->data_size);
             return -1;
@@ -2593,7 +2596,7 @@ ssize_t ne_read(ne_handle handle, void *buffer, size_t bytes)
          }
          // otherwise, copy this data off to our caller's buffer
          off_t block_off = (off_in_stripe % partsz);
-         size_t block_read = (to_read_in_stripe > (partsz - block_off)) ? (partsz - block_off) : to_read_in_stripe;
+         size_t block_read = ((signed)to_read_in_stripe > (partsz - block_off)) ? (partsz - block_off) : to_read_in_stripe;
          if (block_read == 0)
          {
             break;
@@ -2602,7 +2605,7 @@ ssize_t ne_read(ne_handle handle, void *buffer, size_t bytes)
          if (buffer)
          {
             LOG(LOG_INFO, "   Reading %zu bytes from block %d\n", block_read, cur_block);
-            memcpy(buffer + bytes_read, cur_iob->buff + (cur_stripe * partsz) + block_off, block_read);
+            memcpy((void *)(bytes_read + (char *)buffer), (void *)((cur_stripe * partsz) + block_off + (char *)cur_iob->buff), block_read);
          }
          else
          {
@@ -2675,7 +2678,7 @@ ssize_t ne_write(ne_handle handle, const void *buffer, size_t bytes)
       handle->e_ready = 1;
    }
    // allocate space for our buffer references
-   void **tgt_refs = calloc(N + E, sizeof(char *));
+   void **tgt_refs = (void **)calloc(N + E, sizeof(char *));
    if (tgt_refs == NULL)
    {
       LOG(LOG_ERR, "Failed to allocate space for a target buffer array!\n");
@@ -2692,7 +2695,7 @@ ssize_t ne_write(ne_handle handle, const void *buffer, size_t bytes)
    // write out data from the buffer until we have all of it
    // NOTE - the (outblock >= N) check is meant to ensure we don't quit before outputing erasure parts
    ssize_t written = 0;
-   while (written < bytes || outblock >= N)
+   while (written < (signed)bytes || outblock >= N)
    {
       ioblock *push_block = NULL;
       int reserved;
@@ -2713,7 +2716,7 @@ ssize_t ne_write(ne_handle handle, const void *buffer, size_t bytes)
             void *tgt = ioblock_write_target(handle->iob[outblock]);
             // copy caller data into our ioblock
             LOG(LOG_INFO, "   Writing %zu bytes to block %d\n", to_write, outblock);
-            memcpy(tgt, buffer + written, to_write); // no error check, SEGFAULT or nothing
+            memcpy(tgt, (void *)(written + (char *)buffer), to_write); // no error check, SEGFAULT or nothing
             // update any data tracking values
             ioblock_update_fill(handle->iob[outblock], to_write, 0);
             written += to_write;
@@ -2741,7 +2744,7 @@ ssize_t ne_write(ne_handle handle, const void *buffer, size_t bytes)
             for (outblock -= 1; outblock >= 0; outblock--)
             {
                // previously written data will be one partsz behind
-               tgt_refs[outblock] = ioblock_write_target(handle->iob[outblock]) - partsz;
+               tgt_refs[outblock] = (void *)(partsz + (char *)ioblock_write_target(handle->iob[outblock]));
             }
             // generate erasure parts
             ec_encode_data(partsz, N, E, handle->g_tbls,

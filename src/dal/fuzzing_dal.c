@@ -138,7 +138,7 @@ int check_fuzz(int *fuzz, int block)
 int parse_fuzz(char *parse, int **fuzz)
 {
 	// Create new list of block numbers and check for success
-	int *blocks = calloc(FZ_LN, sizeof(int));
+	int *blocks = (int *)calloc(FZ_LN, sizeof(int));
 	if (blocks == NULL)
 	{
 		return -1;
@@ -331,7 +331,7 @@ BLOCK_CTXT fuzzing_open(DAL_CTXT ctxt, DAL_MODE mode, DAL_location location, con
 		return NULL;
 	}
 
-	FUZZING_BLOCK_CTXT bctxt = malloc(sizeof(struct fuzzing_block_context_struct));
+	FUZZING_BLOCK_CTXT bctxt = (FUZZING_BLOCK_CTXT)malloc(sizeof(struct fuzzing_block_context_struct));
 	if (bctxt == NULL)
 	{
 		return NULL;
@@ -486,7 +486,7 @@ int fuzzing_close(BLOCK_CTXT ctxt)
 DAL fuzzing_dal_init(xmlNode *root, DAL_location max_loc)
 {
 	// allocate space for our context struct
-	FUZZING_DAL_CTXT dctxt = malloc(sizeof(struct fuzzing_dal_context_struct));
+	FUZZING_DAL_CTXT dctxt = (FUZZING_DAL_CTXT)malloc(sizeof(struct fuzzing_dal_context_struct));
 	if (dctxt == NULL)
 	{
 		return NULL;
@@ -662,7 +662,7 @@ DAL fuzzing_dal_init(xmlNode *root, DAL_location max_loc)
 		child = child->next;
 	}
 	// allocate and populate a new DAL structure
-	DAL fdal = malloc(sizeof(struct DAL_struct));
+	DAL fdal = (DAL)malloc(sizeof(struct DAL_struct));
 	if (fdal == NULL)
 	{
 		LOG(LOG_ERR, "failed to allocate space for a DAL_struct\n");

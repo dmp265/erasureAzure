@@ -56,9 +56,9 @@
 
 
 # automake requires '=' before '+=', even for these built-in vars
-AM_CPPFLAGS = -I ${top_srcdir}/src
+AM_CPPFLAGS = -std=c++11 -I ${top_srcdir}/src -I /usr/local/include -I /usr/include/libxml2
 AM_CFLAGS   =
-AM_LDFLAGS  =
+AM_LDFLAGS  = -lcpprest -lboost_system -lssl -lcrypto -lazurestorage
 
 
 # define sources used by many programs as noinst libraries, to avoid multiple compilations
@@ -66,21 +66,33 @@ noinst_LTLIBRARIES = libdal.la
 
 SIDE_LIBS = ../logging/liblog.la
 
-libdal_la_SOURCES = posix_dal.c dal.c fuzzing_dal.c s3_dal.c
+libdal_la_SOURCES = posix_dal.c dal.c fuzzing_dal.c s3_dal.c azure_dal.cpp
 libdal_la_CFLAGS = $(XML_CFLAGS)
 DAL_LIB = libdal.la
 
-bin_PROGRAMS = dalverify
-dalverify_SOURCES = dalverify.c
-dalverify_LDADD = $(DAL_LIB) $(SIDE_LIBS)
-dalverify_CFLAGS = $(XML_CFLAGS)
+#bin_PROGRAMS = dalverify
+#dalverify_SOURCES = dalverify.c
+#dalverify_LDADD = $(DAL_LIB) $(SIDE_LIBS)
+#dalverify_CFLAGS = $(XML_CFLAGS)
 
 # ---
-check_PROGRAMS = test_dal test_dal_abort test_dal_migrate test_dal_fuzzing test_dal_fuzzing_put test_dal_s3_verify test_dal_s3 test_dal_s3_abort test_dal_s3_multipart test_dal_s3_migrate test_dal_verify
+check_PROGRAMS = test_dal test_dal_azure test_dal_azure_abort test_dal_azure_migrate #test_dal_abort test_dal_migrate test_dal_fuzzing test_dal_fuzzing_put test_dal_s3_verify test_dal_s3 test_dal_s3_abort test_dal_s3_multipart test_dal_s3_migrate test_dal_verify
 
 test_dal_SOURCES = testing/test_dal.c
 test_dal_LDADD = $(DAL_LIB) $(SIDE_LIBS)
 test_dal_CFLAGS= $(XML_CFLAGS)
+
+test_dal_azure_SOURCES = testing/test_dal_azure.c
+test_dal_azure_LDADD = $(DAL_LIB) $(SIDE_LIBS)
+test_dal_azure_CFLAGS= $(XML_CFLAGS)
+
+test_dal_azure_abort_SOURCES = testing/test_dal_azure_abort.c
+test_dal_azure_abort_LDADD = $(DAL_LIB) $(SIDE_LIBS)
+test_dal_azure_abort_CFLAGS= $(XML_CFLAGS)
+
+test_dal_azure_migrate_SOURCES = testing/test_dal_azure_migrate.c
+test_dal_azure_migrate_LDADD = $(DAL_LIB) $(SIDE_LIBS)
+test_dal_azure_migrate_CFLAGS= $(XML_CFLAGS)
 
 test_dal_abort_SOURCES = testing/test_dal_abort.c
 test_dal_abort_LDADD = $(DAL_LIB) $(SIDE_LIBS)
@@ -122,5 +134,5 @@ test_dal_s3_verify_SOURCES = testing/test_dal_s3_verify.c
 test_dal_s3_verify_LDADD = $(DAL_LIB) $(SIDE_LIBS)
 test_dal_s3_verify_CFLAGS= $(XML_CFLAGS)
 
-TESTS = test_dal test_dal_abort test_dal_migrate test_dal_fuzzing test_dal_fuzzing_put test_dal_s3_verify test_dal_s3 test_dal_s3_abort test_dal_s3_multipart test_dal_s3_migrate test_dal_verify
+TESTS = test_dal test_dal_azure test_dal_azure_abort test_dal_azure_migrate #test_dal_abort test_dal_migrate test_dal_fuzzing test_dal_fuzzing_put test_dal_s3_verify test_dal_s3 test_dal_s3_abort test_dal_s3_multipart test_dal_s3_migrate test_dal_verify
 

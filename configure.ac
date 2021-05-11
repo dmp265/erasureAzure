@@ -10,7 +10,7 @@
 #FOR THE USE OF THIS SOFTWARE.  If software is modified to produce derivative
 #works, such modified software should be clearly marked, so as not to confuse it
 #with the version available from LANL.
-# 
+#
 #Additionally, redistribution and use in source and binary forms, with or without
 #modification, are permitted provided that the following conditions are met:
 #1. Redistributions of source code must retain the above copyright notice, this
@@ -81,7 +81,7 @@ AC_PROG_LIBTOOL
 
 # default to empty flags, instead of "-g -O2"
 : ${CFLAGS=""}
-# AC_PROG_CC
+AC_PROG_CXX
 
 # AC_PROG_RANLIB
 
@@ -96,7 +96,7 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([],[])],
 
 # Checks for header files.
 AC_CHECK_HEADERS([fcntl.h stdint.h stdlib.h string.h unistd.h])
-AXATTR_CHECK
+#AXATTR_CHECK
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_OFF_T
@@ -109,14 +109,18 @@ AC_TYPE_UINT8_T
 # Checks for library functions.
 AC_CHECK_FUNCS([bzero ftruncate memset strerror strtol strtoul malloc])
 
-AXATTR_GET_FUNC_CHECK
-AXATTR_SET_FUNC_CHECK
+#AXATTR_GET_FUNC_CHECK
+#AXATTR_SET_FUNC_CHECK
 
 AC_CHECK_LIB([pthread], [pthread_create], [], [AC_MSG_ERROR(["Could not locate libpthread!"])])
 
 AC_CHECK_LIB([xml2], [xmlReadFile], [], [AC_MSG_ERROR(["Could not locate libxml2!"])])
 
 AC_CHECK_LIB([s3], [S3_initialize], [], [AC_MSG_ERROR(["Could not locate libs3!"])])
+
+AC_CHECK_LIB([ssl], [SSL_library_init], [], [AC_MSG_ERROR(["Could not locate libssl!"])])
+
+AC_CHECK_LIB([crypto], [CRYPTO_new_ex_data], [], [AC_MSG_ERROR(["Could not locate libcrypto!"])])
 
 PKG_CHECK_MODULES( XML, libxml-2.0 )
 
@@ -126,7 +130,7 @@ AC_CHECK_LIB([isal],    [crc32_ieee],
        [echo
         echo "WARNING:  Could not properly link 'crc32_ieee' from isa-l, defaulting to '_base' implementation"
         echo "          IN THIS STATE, THESE UTILITES MAY NOT FUNCTION AS EXPECTED AND WILL ALMOST CERTAINLY HAVE VERY POOR PERFORMANCE"
-        echo], 
+        echo],
        [AC_MSG_ERROR(["Could not locate Intel's Intelligent Storage Acceleration Library (isa-l) on this system!  Please verify that the proper version of the library (v2.16.0 or higher) is installed."])])])
 
 AC_DEFINE( [GTESTNEVAR], [], [Testing variable] )
@@ -139,15 +143,15 @@ AC_CHECK_LIB([isal], [crc32_gzip_refl], [:], [warnlibs="$warnlibs""libisal(need-
 librdmacm_present=true
 AC_CHECK_LIB([rdmacm], [rdma_getaddrinfo], [], [librdmacm_present=false  &&  warnlibs="$warnlibs""librdmacm "])
 AM_CONDITIONAL([BENCH], [test "$warnlibs" = ""  ])
-AM_COND_IF([BENCH], [], 
+AM_COND_IF([BENCH], [],
    [echo
     echo "WARNING: failed to properly link all necessary functions from $( echo "$warnlibs" | sed 's/ $/\./' | sed 's/ /, /g' )"
     echo "         These libraries may be missing, or below the required versions."
     echo "         The 'isal_benchmark' subdir will not be built!"
     echo ])
 
- 
- 
+
+
 # Allow turning on debugging flags
 # NOTE: There are currently no fast-timer (i.e. 'ft') diagnostics.
 #       If there were, we would probably only want to see them for specialized debugging.

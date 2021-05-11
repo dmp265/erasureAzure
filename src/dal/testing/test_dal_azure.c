@@ -76,11 +76,11 @@ int main(int argc, char **argv)
    LIBXML_TEST_VERSION
 
    /*parse the file and get the DOM */
-   doc = xmlReadFile("./testing/config.xml", NULL, XML_PARSE_NOBLANKS);
+   doc = xmlReadFile("./testing/azure_config.xml", NULL, XML_PARSE_NOBLANKS);
 
    if (doc == NULL)
    {
-      printf("error: could not parse file %s\n", "./dal/testing/config.xml");
+      printf("error: could not parse file %s\n", "./dal/testing/azure_config.xml");
       return -1;
    }
 
@@ -113,18 +113,19 @@ int main(int argc, char **argv)
       printf("error: failed to allocate write buffer\n");
       return -1;
    }
-   BLOCK_CTXT block = dal->open(dal->ctxt, DAL_WRITE, maxloc, "");
+   BLOCK_CTXT block = dal->open(dal->ctxt, DAL_WRITE, maxloc, "testObj");
    if (block == NULL)
    {
       printf("error: failed to open block context for write: %s\n", strerror(errno));
       return -1;
    }
-   if (dal->put(block, writebuffer, (10 * 1024)))
+   int res;
+   if ((res = dal->put(block, writebuffer, (10 * 1024))))
    {
-      printf("warning: put did not return expected value\n");
+      printf("warning: put did not return expected value %d\n", res);
    }
-   char *meta_val = (char *)"this is a meta value!\n";
-   if (dal->set_meta(block, meta_val, 22))
+   char *meta_val = (char *)"this is a meta value!";
+   if (dal->set_meta(block, meta_val, strlen(meta_val)))
    {
       printf("warning: set_meta did not return expected value\n");
    }
@@ -141,7 +142,7 @@ int main(int argc, char **argv)
       printf("error: failed to allocate read buffer\n");
       return -1;
    }
-   block = dal->open(dal->ctxt, DAL_READ, maxloc, "");
+   block = dal->open(dal->ctxt, DAL_READ, maxloc, "testObj");
    if (block == NULL)
    {
       printf("error: failed to open block context for read: %s\n", strerror(errno));
@@ -155,13 +156,14 @@ int main(int argc, char **argv)
    {
       printf("warning: retrieved data does not match written!\n");
    }
-   if (dal->get_meta(block, (char *)readbuffer, (10 * 1024)) != 22)
+   int ret = dal->get_meta(block, (char *)readbuffer, (10 * 1024));
+   if (ret != (signed)strlen(meta_val))
    {
-      printf("warning: get_meta returned an unexpected value\n");
+      printf("warning: get_meta returned an unexpected value (%d %d) %s\n", ret, (int)strlen(meta_val), (char *)readbuffer);
    }
-   if (strncmp(meta_val, (char *)readbuffer, 22))
+   if (strncmp(meta_val, (char *)readbuffer, strlen(meta_val)))
    {
-      printf("warning: retrieved meta value does not match written!\n");
+      printf("warning: retrieved meta value (%s) does not match written! (%s)\n", (char *)readbuffer, meta_val);
    }
    if (dal->close(block))
    {
@@ -170,7 +172,7 @@ int main(int argc, char **argv)
    }
 
    // Delete the block we created
-   if (dal->del(dal->ctxt, maxloc, ""))
+   if (dal->del(dal->ctxt, maxloc, "testObj"))
    {
       printf("warning: del failed!\n");
    }

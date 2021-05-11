@@ -1,6 +1,6 @@
 #include "logging/logging.h"
 
-#include <stdlib.h>             // malloc()
+#include <stdlib.h> // malloc()
 #include <string.h>
 #include <assert.h>
 
@@ -10,7 +10,8 @@
 //    if the logging function fails?  I suspect not.  If you wanted to,
 //    you could define LOG(...) to be TRY_GE0(printf_log(...))
 
-ssize_t printf_log(size_t prio, const char* format, ...) {
+ssize_t printf_log(size_t prio, const char *format, ...)
+{
    va_list list;
    va_start(list, format);
 

@@ -57,13 +57,11 @@ LANL contributions is found at https://github.com/jti-lanl/aws4c.
 
 GNU licenses can be found at http://www.gnu.org/licenses/.
 */
-
 #include "erasureUtils_auto_config.h"
 #if defined(DEBUG_ALL) || defined(DEBUG_DAL)
 #define DEBUG 1
 #endif
 #define LOG_PREFIX "dal"
-
 #include "logging/logging.h"
 #include "dal.h"
 
@@ -122,9 +120,14 @@ DAL init_dal(xmlNode *dal_conf_root, DAL_location max_loc)
    {
       return s3_dal_init(dal_conf_root->children, max_loc);
    }
+   else if (strncasecmp((char *)typetxt->content, "azure", 6) == 0)
+   {
+      return azure_dal_init(dal_conf_root->children, max_loc);
+   }
 
    // if no DAL found, return NULL
-   LOG(LOG_ERR, "failed to identify a DAL of type: \"%s\"\n", typetxt->content);
+   fprintf(stderr, "failed to identify a DAL of type: \"%s\"\n", typetxt->content);
+   fflush(stderr);
    errno = ENODEV;
    return NULL;
 }

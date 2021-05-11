@@ -72,10 +72,10 @@ libne_la_LIBADD  = ../logging/liblog.la ../dal/libdal.la ../io/libioqueue.la ../
 libne_la_CFLAGS  = $(XML_CFLAGS)
 NE_LIBS = libne.la
 
-bin_PROGRAMS = neutil
-neutil_SOURCES = neutil.c
-neutil_LDADD   = $(NE_LIBS)
-neutil_CFLAGS  = $(XML_CFLAGS)
+#bin_PROGRAMS = neutil
+#neutil_SOURCES = neutil.c
+#neutil_LDADD   = $(NE_LIBS)
+#neutil_CFLAGS  = $(XML_CFLAGS)
 
 
 # ---

@@ -77,7 +77,7 @@ GNU licenses can be found at http://www.gnu.org/licenses/.
 #define TIMEOUT 0            // S3 request timeout
 #define TRIES 5              // Number of times to retry a request
 #define IO_SIZE (5 << 20)    // Preferred I/O Size: 5M
-#define NO_OBJID "noneGiven" // Substitute ID when one is provided
+#define NO_OBJID "noneGiven" // Substitute ID when none is provided
 
 //   -------------    S3 CONTEXT    -------------
 
@@ -165,7 +165,7 @@ static int num_digits(int value)
  * @param int dataLen : Number of chars to be added
  * @return int : Number of chars added, or 0 on an error
  */
-static int growbuffer_append(growbuffer **gb, const char *data, int dataLen)
+static int growbuffer_append(growbuffer **gb, const void *data, int dataLen)
 {
    int origDataLen = dataLen;
    while (dataLen)
@@ -202,7 +202,9 @@ static int growbuffer_append(growbuffer **gb, const char *data, int dataLen)
 
       memcpy(&(buf->data[buf->size]), data, toCopy);
 
-      buf->size += toCopy, data += toCopy, dataLen -= toCopy;
+      buf->size += toCopy;
+      data = (void *)(toCopy + (char *)data);
+      dataLen -= toCopy;
    }
 
    return origDataLen;
@@ -217,7 +219,7 @@ static int growbuffer_append(growbuffer **gb, const char *data, int dataLen)
  * @param char* buffer : Buffer to read data into
  */
 static void growbuffer_read(growbuffer **gb, int amt, int *amtReturn,
-                            char *buffer)
+                            void *buffer)
 {
    *amtReturn = 0;
 
@@ -316,7 +318,7 @@ static int putObjectDataCallback(int bufferSize, char *buffer, void *callbackDat
 
    if (bctxt->data_size)
    {
-      int toRead = ((bctxt->data_size > (unsigned)bufferSize) ? (unsigned)bufferSize : bctxt->data_size);
+      unsigned int toRead = (((unsigned)bctxt->data_size > (unsigned)bufferSize) ? (unsigned)bufferSize : (unsigned)bctxt->data_size);
       if (bctxt->data_gb)
       {
          growbuffer_read(&(bctxt->data_gb), toRead, &ret, buffer);
@@ -590,7 +592,7 @@ int s3_verify(DAL_CTXT ctxt, char fix)
    S3_DAL_CTXT dctxt = (S3_DAL_CTXT)ctxt; // should have been passed a s3 context
 
    int size = sizeof(char) * (4 + num_digits(dctxt->max_loc.block) + num_digits(dctxt->max_loc.cap) + num_digits(dctxt->max_loc.scatter));
-   char *bucket = malloc(size);
+   char *bucket = (char *)malloc(size);
    int num_err = 0;
    for (int b = 0; b <= dctxt->max_loc.block; b++)
    {
@@ -667,7 +669,7 @@ int s3_migrate(DAL_CTXT ctxt, const char *objID, DAL_location src, DAL_location 
 
    // Form source bucket from location
    int srcSize = sizeof(char) * (4 + num_digits(src.block) + num_digits(src.cap) + num_digits(src.scatter));
-   char *srcBucket = malloc(srcSize);
+   char *srcBucket = (char *)malloc(srcSize);
    snprintf(srcBucket, srcSize, "b%d.%d.%d", src.block, src.cap, src.scatter);
 
    S3BucketContext srcBucketContext = {
@@ -684,7 +686,7 @@ int s3_migrate(DAL_CTXT ctxt, const char *objID, DAL_location src, DAL_location 
 
    // Form destination bucket from location
    int destSize = sizeof(char) * (4 + num_digits(dest.block) + num_digits(dest.cap) + num_digits(dest.scatter));
-   char *destBucket = malloc(destSize);
+   char *destBucket = (char *)malloc(destSize);
    snprintf(destBucket, destSize, "b%d.%d.%d", dest.block, dest.cap, dest.scatter);
 
    // Give several tries to copy object
@@ -746,7 +748,7 @@ int s3_del(DAL_CTXT ctxt, DAL_location location, const char *objID)
 
    // Form bucket from location
    int size = sizeof(char) * (4 + num_digits(location.block) + num_digits(location.cap) + num_digits(location.scatter));
-   char *bucket = malloc(size);
+   char *bucket = (char *)malloc(size);
    snprintf(bucket, size, "b%d.%d.%d", location.block, location.cap, location.scatter);
 
    S3BucketContext bucketContext = {
@@ -797,7 +799,7 @@ int s3_stat(DAL_CTXT ctxt, DAL_location location, const char *objID)
 
    // Form bucket from location
    int size = sizeof(char) * (4 + num_digits(location.block) + num_digits(location.cap) + num_digits(location.scatter));
-   char *bucket = malloc(size);
+   char *bucket = (char *)malloc(size);
    snprintf(bucket, size, "b%d.%d.%d", location.block, location.cap, location.scatter);
 
    S3BucketContext bucketContext = {
@@ -863,7 +865,7 @@ BLOCK_CTXT s3_open(DAL_CTXT ctxt, DAL_MODE mode, DAL_location location, const ch
    S3_DAL_CTXT dctxt = (S3_DAL_CTXT)ctxt; // should have been passed a s3 context
 
    // allocate space for a new DAL context
-   S3_BLOCK_CTXT bctxt = malloc(sizeof(struct s3_block_context_struct));
+   S3_BLOCK_CTXT bctxt = (S3_BLOCK_CTXT)malloc(sizeof(struct s3_block_context_struct));
    if (bctxt == NULL)
    {
       return NULL;
@@ -884,10 +886,10 @@ BLOCK_CTXT s3_open(DAL_CTXT ctxt, DAL_MODE mode, DAL_location location, const ch
 
    // Form bucket from location
    int size = sizeof(char) * (4 + num_digits(location.block) + num_digits(location.cap) + num_digits(location.scatter));
-   char *bucket = malloc(size);
+   char *bucket = (char *)malloc(size);
    snprintf(bucket, size, "b%d.%d.%d", location.block, location.cap, location.scatter);
 
-   bctxt->bucketContext = malloc(sizeof(S3BucketContext));
+   bctxt->bucketContext = (S3BucketContext *)malloc(sizeof(S3BucketContext));
    bctxt->bucketContext->hostName = NULL;
    bctxt->bucketContext->bucketName = strdup(bucket);
    bctxt->bucketContext->protocol = S3ProtocolHTTP;
@@ -1100,7 +1102,7 @@ ssize_t s3_get(BLOCK_CTXT ctxt, void *buf, size_t size, off_t offset)
    do
    {
       growbuffer_read(&(bctxt->data_gb), bctxt->data_size, &ret, buf);
-      buf += ret;
+      buf = (void *)(ret + (char *)buf);
       size += ret;
    } while (ret > 0);
    growbuffer_destroy(bctxt->data_gb);
@@ -1203,7 +1205,7 @@ int s3_close(BLOCK_CTXT ctxt)
              NULL,
              NULL,
              -1,
-             0,
+             S3CannedAclPrivate,
              1,
              &meta,
              0
@@ -1286,7 +1288,7 @@ DAL s3_dal_init(xmlNode *root, DAL_location max_loc)
          char *hostname = (char *)root->children->content;
 
          // allocate space for our context struct
-         S3_DAL_CTXT dctxt = malloc(sizeof(struct s3_dal_context_struct));
+         S3_DAL_CTXT dctxt = (S3_DAL_CTXT)malloc(sizeof(struct s3_dal_context_struct));
          if (dctxt == NULL)
          {
             return NULL;
@@ -1313,7 +1315,7 @@ DAL s3_dal_init(xmlNode *root, DAL_location max_loc)
             }
             else if (root->type == XML_ELEMENT_NODE && strncmp((char *)root->name, "io_size", 8) == 0)
             {
-               if (atol((char *)root->children->content) > io_size)
+               if ((size_t)atol((char *)root->children->content) > io_size)
                {
                   io_size = atol((char *)root->children->content);
                }
@@ -1350,7 +1352,7 @@ DAL s3_dal_init(xmlNode *root, DAL_location max_loc)
          }
 
          // allocate and populate a new DAL structure
-         DAL s3dal = malloc(sizeof(struct DAL_struct));
+         DAL s3dal = (DAL)malloc(sizeof(struct DAL_struct));
          if (s3dal == NULL)
          {
             LOG(LOG_ERR, "failed to allocate space for a DAL_struct\n");

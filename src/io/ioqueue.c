@@ -11,7 +11,7 @@ SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR ASSUMES ANY LIABILITY
 FOR THE USE OF THIS SOFTWARE.  If software is modified to produce derivative
 works, such modified software should be clearly marked, so as not to confuse it
 with the version available from LANL.
- 
+
 Additionally, redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
 1. Redistributions of source code must retain the above copyright notice, this
@@ -58,10 +58,6 @@ LANL contributions is found at https://github.com/jti-lanl/aws4c.
 GNU licenses can be found at http://www.gnu.org/licenses/.
 */
 
-
-
- 
-
 /* ---------------------------------------------------------------------------
 
 This file provides the implementation of multiple operations intended for
@@ -107,8 +103,8 @@ underlying skt_etc() functions.
 // #include "libne_auto_config.h"   /* HAVE_LIBISAL */
 
 #include "erasureUtils_auto_config.h"
-#if defined(DEBUG_ALL)  ||  defined(DEBUG_IO)
-   #define DEBUG 1
+#if defined(DEBUG_ALL) || defined(DEBUG_IO)
+#define DEBUG 1
 #endif
 #define LOG_PREFIX "ioqueue"
 #include "logging/logging.h"
@@ -125,11 +121,7 @@ underlying skt_etc() functions.
 #include <errno.h>
 #include <pthread.h>
 
-
-
-
 /* ------------------------------   IO QUEUE/BLOCK INTERACTION   ------------------------------ */
-
 
 /**
  * Creates a new IOQueue
@@ -137,43 +129,49 @@ underlying skt_etc() functions.
  * @param size_t partsz : Byte size of each erasure part
  * @return ioqueue* : Reference to the newly created IOQueue
  */
-ioqueue* create_ioqueue( size_t iosz, size_t partsz, DAL_MODE mode ) {
-   LOG( LOG_INFO, "Creating IOQueue with IOSZ=%zu, PARTSZ=%zu, MODE=%s\n", iosz, partsz, ( mode == DAL_READ ) ? "read" : "write" );
+ioqueue *create_ioqueue(size_t iosz, size_t partsz, DAL_MODE mode)
+{
+   LOG(LOG_INFO, "Creating IOQueue with IOSZ=%zu, PARTSZ=%zu, MODE=%s\n", iosz, partsz, (mode == DAL_READ) ? "read" : "write");
    // sanity check that our IO Size is sufficient to at least do something
-   if ( iosz <= CRC_BYTES ) {
-      LOG( LOG_ERR, "IO Size of %zu is too small for CRC size of %d!\n", iosz, CRC_BYTES );
+   if (iosz <= CRC_BYTES)
+   {
+      LOG(LOG_ERR, "IO Size of %zu is too small for CRC size of %d!\n", iosz, CRC_BYTES);
       return NULL;
    }
    size_t subsz = (mode == DAL_READ) ? (iosz - CRC_BYTES) : partsz;
-   int    partcnt = (int) ( (iosz - CRC_BYTES) / partsz); // number of complete parts per IO
-   if ( partsz > (iosz - CRC_BYTES) ) {
+   int partcnt = (int)((iosz - CRC_BYTES) / partsz); // number of complete parts per IO
+   if (partsz > (iosz - CRC_BYTES))
+   {
       partcnt = 1;
    }
-   LOG( LOG_INFO, "Subsz = %zu,  and  Partcnt = %d\n", subsz, partcnt );
+   LOG(LOG_INFO, "Subsz = %zu,  and  Partcnt = %d\n", subsz, partcnt);
    // create an ioqueue struct
-   ioqueue* ioq = malloc( sizeof( struct ioqueue_struct ) );
-   if ( ioq == NULL ) {
-      LOG( LOG_ERR, "failed to allocate memory for an ioqueue_struct!\n" );
+   ioqueue *ioq = (ioqueue *)malloc(sizeof(struct ioqueue_struct));
+   if (ioq == NULL)
+   {
+      LOG(LOG_ERR, "failed to allocate memory for an ioqueue_struct!\n");
       return NULL;
    }
    // intialize all ioqueue values
-   if ( pthread_mutex_init( &(ioq->qlock), NULL ) ) {
-      LOG( LOG_ERR, "failed to initialize the ioqueue lock!\n" );
-      free( ioq );
+   if (pthread_mutex_init(&(ioq->qlock), NULL))
+   {
+      LOG(LOG_ERR, "failed to initialize the ioqueue lock!\n");
+      free(ioq);
       return NULL;
    }
    // initialize the condition var
-   if ( pthread_cond_init( &(ioq->avail_block), NULL ) ) {
-      LOG( LOG_ERR, "failed to initialize the ioqueue avail_block conditional var!\n" );
-      pthread_mutex_destroy( &(ioq->qlock) );
-      free( ioq );
+   if (pthread_cond_init(&(ioq->avail_block), NULL))
+   {
+      LOG(LOG_ERR, "failed to initialize the ioqueue avail_block conditional var!\n");
+      pthread_mutex_destroy(&(ioq->qlock));
+      free(ioq);
       return NULL;
    }
    // determine fill and split thresholds for these blocks
    //ioq->fill_threshold = ( (iosz - CRC_BYTES) > partsz ) ? (iosz - CRC_BYTES) : partsz;
    // NOTE -- if we're writing, we need to get both a complete part and a complete IO
-   ioq->split_threshold = ( mode == DAL_READ ) ? (partcnt * partsz) : (iosz - CRC_BYTES);
-   LOG( LOG_INFO, "Using split_treshold=%zu\n", ioq->split_threshold );
+   ioq->split_threshold = (mode == DAL_READ) ? (partcnt * partsz) : (iosz - CRC_BYTES);
+   LOG(LOG_INFO, "Using split_treshold=%zu\n", ioq->split_threshold);
    // NOTE -- if we're writing, we need to split blocks on IO alignment to make room for CRCs
    ioq->partsz = partsz;
    ioq->iosz = iosz;
@@ -187,8 +185,9 @@ ioqueue* create_ioqueue( size_t iosz, size_t partsz, DAL_MODE mode ) {
    ioq->blocksz = ioq->split_threshold + CRC_BYTES;
    // check for misalignment of IOSZ and PARTSZ values
    size_t overflow = 0;
-   if ( (overflow = ioq->split_threshold % subsz) ) {
-      LOG( LOG_INFO, "Split threshold of %zu does not cleanly align with subsz of %zu\n", ioq->split_threshold, subsz );
+   if ((overflow = ioq->split_threshold % subsz))
+   {
+      LOG(LOG_INFO, "Split threshold of %zu does not cleanly align with subsz of %zu\n", ioq->split_threshold, subsz);
       //overflow = 1;
       // NOTE -- misalignment means we need space for potentially another subsz worth of overlap
       ioq->blocksz += subsz;
@@ -197,64 +196,69 @@ ioqueue* create_ioqueue( size_t iosz, size_t partsz, DAL_MODE mode ) {
    //   LOG( LOG_INFO, "Post spillage fill %zu does not cleanly align with subsz of %zu\n", ioq->fill_threshold - spillage, subsz );
    //   overflow = 1;
    //}
-   LOG( LOG_INFO, "Using ioblock size of %zu\n", ioq->blocksz );
+   LOG(LOG_INFO, "Using ioblock size of %zu\n", ioq->blocksz);
    int i;
-   for ( i = 0; i < SUPER_BLOCK_CNT; i++ ) {
+   for (i = 0; i < SUPER_BLOCK_CNT; i++)
+   {
       // initialize state and struct for each ioblock
-      ioq->block_list[i].buff = malloc( sizeof( char ) * ioq->blocksz );
-      if ( ioq->block_list[i].buff == NULL ) {
+      ioq->block_list[i].buff = malloc(sizeof(char) * ioq->blocksz);
+      if (ioq->block_list[i].buff == NULL)
+      {
          // we've messed up, time to try to clean everything up
-         LOG( LOG_ERR, "failed to allocate space for ioblock %d!\n", i );
-         for ( i -= 1; i >= 0; i-- ) {
-            free( ioq->block_list[i].buff );
+         LOG(LOG_ERR, "failed to allocate space for ioblock %d!\n", i);
+         for (i -= 1; i >= 0; i--)
+         {
+            free(ioq->block_list[i].buff);
          }
-         pthread_cond_destroy( &(ioq->avail_block) );
-         pthread_mutex_destroy( &(ioq->qlock) );
-         free( ioq );
+         pthread_cond_destroy(&(ioq->avail_block));
+         pthread_mutex_destroy(&(ioq->qlock));
+         free(ioq);
          return NULL;
       }
-      ioq->block_list[i].data_size   = 0;
-      ioq->block_list[i].error_end   = 0;
+      ioq->block_list[i].data_size = 0;
+      ioq->block_list[i].error_end = 0;
    }
    return ioq;
 }
-
 
 /**
  * Destroys an existing IOQueue
  * @param ioqueue* ioq : Reference to the ioqueue struct to be destroyed
  * @return int : Zero on success and a negative value if an error occurred
  */
-int destroy_ioqueue( ioqueue* ioq ) {
-   if ( ioq->depth != SUPER_BLOCK_CNT ) {
-      LOG( LOG_ERR, "Cannot destroy ioqueue struct while ioblocks are in use!\n" );
+int destroy_ioqueue(ioqueue *ioq)
+{
+   if (ioq->depth != SUPER_BLOCK_CNT)
+   {
+      LOG(LOG_ERR, "Cannot destroy ioqueue struct while ioblocks are in use!\n");
       return -1;
    }
    int i;
-   for ( i = 0; i < SUPER_BLOCK_CNT; i++ ) {
-      free( ioq->block_list[i].buff );
+   for (i = 0; i < SUPER_BLOCK_CNT; i++)
+   {
+      free(ioq->block_list[i].buff);
    }
-   pthread_cond_destroy( &(ioq->avail_block) );
-   pthread_mutex_destroy( &(ioq->qlock) );
-   free( ioq );
-   LOG( LOG_INFO, "IOQueue successfully destroyed\n" );
+   pthread_cond_destroy(&(ioq->avail_block));
+   pthread_mutex_destroy(&(ioq->qlock));
+   free(ioq);
+   LOG(LOG_INFO, "IOQueue successfully destroyed\n");
    return 0;
 }
-
 
 /**
  * Calculates the maximum amount of data the queue can contain (useful for determining if seek is necessary)
  * @param ioqueue* ioq : IOQueue for which to calculate the max data value
  * @return size_t : Max data size value
  */
-ssize_t ioqueue_maxdata( ioqueue* ioq ) {
-	if ( ioq == NULL ) {
-		LOG( LOG_ERR, "Received NULL ioqueue reference!\n" );
-		return -1;
-	}
-	return ( ioq->depth * ioq->split_threshold );
+ssize_t ioqueue_maxdata(ioqueue *ioq)
+{
+   if (ioq == NULL)
+   {
+      LOG(LOG_ERR, "Received NULL ioqueue reference!\n");
+      return -1;
+   }
+   return (ioq->depth * ioq->split_threshold);
 }
-
 
 /**
  * Sets ioblock fill level such that a specific data split will occur (used to align ioblock to a specific offset)
@@ -263,74 +267,82 @@ ssize_t ioqueue_maxdata( ioqueue* ioq ) {
  * @param ioqueue* ioq : Reference to the ioqueue struct from which the ioblock was gathered
  * @return int : A positive number of ioblocks to be thrown out or a negative value if an error occurred
  */
-int align_ioblock( ioblock* cur_block, size_t trim, ioqueue* ioq ) {
-	if ( ioq == NULL ) {
-		LOG( LOG_ERR, "Received NULL ioqueue reference!\n" );
-		return -1;
-	}
-	if ( cur_block == NULL ) {
-		LOG( LOG_ERR, "Received NULL ioblock reference!\n" );
-		return -1;
-	}
+int align_ioblock(ioblock *cur_block, size_t trim, ioqueue *ioq)
+{
+   if (ioq == NULL)
+   {
+      LOG(LOG_ERR, "Received NULL ioqueue reference!\n");
+      return -1;
+   }
+   if (cur_block == NULL)
+   {
+      LOG(LOG_ERR, "Received NULL ioblock reference!\n");
+      return -1;
+   }
    // note how many ioblocks will need to be junked to hit this alignment
-   int junk_blocks = (int)( trim / ioq->split_threshold) + 1;
+   int junk_blocks = (int)(trim / ioq->split_threshold) + 1;
    // adjust our trim value, if it exceeds the split_threshold
    trim -= ((junk_blocks - 1) * ioq->split_threshold);
    // calculate how much fake data we need to populate for the desired alignment
    size_t falsefill = ioq->split_threshold - trim;
    // sanity checks
-//   if ( falsefill > ioq->fill_threshold ) {
-//      LOG( LOG_ERR, "Falsefill value (%zu) exceeds fill_threshold (%zu)\n", falsefill, ioq->fill_threshold );
-//      return -1;
-//   }
-   LOG( LOG_INFO, "Filling %zu fake bytes to achieve alignment\n", falsefill );
+   //   if ( falsefill > ioq->fill_threshold ) {
+   //      LOG( LOG_ERR, "Falsefill value (%zu) exceeds fill_threshold (%zu)\n", falsefill, ioq->fill_threshold );
+   //      return -1;
+   //   }
+   LOG(LOG_INFO, "Filling %zu fake bytes to achieve alignment\n", falsefill);
    cur_block->data_size = falsefill;
    cur_block->error_end = falsefill;
    return junk_blocks;
 }
 
-
 /**
- * Determines if a new ioblock is necessary to store additional data and, if so, reserves it.  Also, as ioblocks are filled, 
+ * Determines if a new ioblock is necessary to store additional data and, if so, reserves it.  Also, as ioblocks are filled,
  * populates the 'push_block' reference with the ioblock that should be passed for read/write use.
  * @param ioblock** cur_block : Reference to be popluated with an updated ioblock (usable if return value == 0)
  * @param ioblock** push_block : Reference to be populated with a filled ioblock, ready to be passed for read/write use
  * @param ioqueue* ioq : Reference to the ioqueue struct from which ioblocks should be gathered
  * @return int : A positive value if the passed ioblock is full and push_block has been set (cur_block updated and push_block set),
- *               a value of zero if the current ioblock is now safe to fill (cur_block set to new ioblock reference OR unchanged), 
+ *               a value of zero if the current ioblock is now safe to fill (cur_block set to new ioblock reference OR unchanged),
  *               and a negative value if an error was encountered.
- * 
+ *
  * NOTE: It is an error to write data of size != both erasure part size and the IO size to an ioblock.
- * 
+ *
  * NOTE -- it is possible, in the case of a full ioblock (return value == 1), for the newly reserved ioblock to ALSO be full.
  *         ONLY a return value of zero implies the current ioblock is safe for use!
  */
-int reserve_ioblock( ioblock** cur_block, ioblock** push_block, ioqueue* ioq ) {
+int reserve_ioblock(ioblock **cur_block, ioblock **push_block, ioqueue *ioq)
+{
    // track any data we need to copy
-   void* datacpy = NULL;
-   size_t cpysz  = 0;
-   ioblock* prev_block = (*cur_block);
+   void *datacpy = NULL;
+   size_t cpysz = 0;
+   ioblock *prev_block = (*cur_block);
 
    // sanity check that we can dereference the ioq
-   if ( ioq == NULL ) {
-      LOG( LOG_ERR, "Received NULL ioq!\n" );
+   if (ioq == NULL)
+   {
+      LOG(LOG_ERR, "Received NULL ioq!\n");
       return -1;
    }
 
    // if we have a previous IO block...
-   if ( prev_block != NULL ) {
+   if (prev_block != NULL)
+   {
       // check if that block has room remaining
-      if ( prev_block->data_size < ioq->split_threshold ) {
-         LOG( LOG_INFO, "Continuing to use current block, as %zu is below split_threshold\n", prev_block->data_size );
+      if (prev_block->data_size < ioq->split_threshold)
+      {
+         LOG(LOG_INFO, "Continuing to use current block, as %zu is below split_threshold\n", prev_block->data_size);
          return 0;
       }
       // otherwise, we may need to copy data over to the new ioblock
-      if ( prev_block->data_size > ioq->split_threshold ) {
-         datacpy = prev_block->buff + ioq->split_threshold;
+      if (prev_block->data_size > ioq->split_threshold)
+      {
+         datacpy = (void *)(ioq->split_threshold + (char *)prev_block->buff);
          cpysz = prev_block->data_size - ioq->split_threshold;
          // sanity check
-         if ( prev_block->data_size > ioq->blocksz ) {
-            LOG( LOG_ERR, "Detected buffer overrun!  %zu data > %zu blocksz!\n", prev_block->data_size, ioq->blocksz );
+         if (prev_block->data_size > ioq->blocksz)
+         {
+            LOG(LOG_ERR, "Detected buffer overrun!  %zu data > %zu blocksz!\n", prev_block->data_size, ioq->blocksz);
             return -1;
          }
       }
@@ -339,74 +351,83 @@ int reserve_ioblock( ioblock** cur_block, ioblock** push_block, ioqueue* ioq ) {
    }
 
    // if the previous block was NULL or did not have sufficient space, we need to reserve a new block
-   if ( pthread_mutex_lock(&ioq->qlock) ) { // aquire the queue lock
-      LOG( LOG_ERR, "Failed to aquire ioqueue lock!\n" );
+   if (pthread_mutex_lock(&ioq->qlock))
+   { // aquire the queue lock
+      LOG(LOG_ERR, "Failed to aquire ioqueue lock!\n");
       return -1;
    }
    // wait for a block to be available for use
-   while ( ioq->depth == 0 ) {
-      LOG( LOG_INFO, "Waiting for ioblock to become available\n" );
-      pthread_cond_wait( &ioq->avail_block, &ioq->qlock );
+   while (ioq->depth == 0)
+   {
+      LOG(LOG_INFO, "Waiting for ioblock to become available\n");
+      pthread_cond_wait(&ioq->avail_block, &ioq->qlock);
    }
    // update the current block to the new reference
    (*cur_block) = &(ioq->block_list[ioq->head]);
    // update queue values to reflect the block being in use
    ioq->depth--;
    ioq->head += 1;
-   if ( ioq->head == SUPER_BLOCK_CNT ) { ioq->head = 0; }
+   if (ioq->head == SUPER_BLOCK_CNT)
+   {
+      ioq->head = 0;
+   }
    pthread_mutex_unlock(&ioq->qlock);
 
    // clear any old values in this newly reserved block
-   (*cur_block)->data_size   = 0;
-   (*cur_block)->error_end   = 0;
+   (*cur_block)->data_size = 0;
+   (*cur_block)->error_end = 0;
 
    // we have the new block; check if we need to copy data over to it
-   if ( datacpy != NULL ) {
-      LOG( LOG_INFO, "Copying %zu bytes to next ioblock\n", cpysz );
+   if (datacpy != NULL)
+   {
+      LOG(LOG_INFO, "Copying %zu bytes to next ioblock\n", cpysz);
       (*cur_block)->data_size = cpysz;
       // check for any data errors we need to propagate forward
-      if ( prev_block->error_end > ioq->split_threshold ) {
+      if ((unsigned)prev_block->error_end > ioq->split_threshold)
+      {
          // this is an oversimplification, but being exact won't actually gain us anything
          (*cur_block)->error_end = cpysz; // assume all copied data is junk
       }
-      else {
+      else
+      {
          // only bother copying good data over to the new block
-         memcpy( (*cur_block)->buff, datacpy, cpysz );
+         memcpy((*cur_block)->buff, datacpy, cpysz);
       }
       prev_block->data_size = ioq->split_threshold; // update prev block to exclude copied data
    }
-   return ( prev_block == NULL ) ? 0 : 1; // if there was a previous block, it should be pushed
+   return (prev_block == NULL) ? 0 : 1; // if there was a previous block, it should be pushed
 }
-
 
 /**
  * Retrieve a buffer target reference for writing into the given ioblock
  * @param ioblock* block : Reference to the ioblock to retrieve a target for
  * @return void* : Buffer reference to write to
  */
-void* ioblock_write_target( ioblock* block ) {
-   return block->buff + block->data_size;
+void *ioblock_write_target(ioblock *block)
+{
+   return (void *)(block->data_size + (char *)block->buff);
 }
-
 
 /**
  * Retrieve a buffer target reference for reading data from the given ioblock
  * @param ioblock* block : Reference to the ioblock to retrieve a target for
  * @param size_t* bytes : Reference to be populated with the data size of the ioblock
- * @param off_t* error_end : Reference to be populated with the offset of the final data error 
+ * @param off_t* error_end : Reference to be populated with the offset of the final data error
  *                           in the buffer ( i.e. data beyond this offset is valid )
  * @return void* : Buffer reference to read from
  */
-void* ioblock_read_target( ioblock* block, size_t* bytes, off_t* error_end ) {
-   if ( error_end ) {
+void *ioblock_read_target(ioblock *block, size_t *bytes, off_t *error_end)
+{
+   if (error_end)
+   {
       *error_end = block->error_end;
    }
-   if ( bytes ) {
+   if (bytes)
+   {
       (*bytes) = block->data_size;
    }
    return block->buff;
 }
-
 
 /**
  * Update the data_size value of a given ioblock
@@ -414,14 +435,15 @@ void* ioblock_read_target( ioblock* block, size_t* bytes, off_t* error_end ) {
  * @param size_t bytes : Size of data added to the ioblock
  * @param char bad_data : Indicates if the stored data contains errors ( 0 for no errors, 1 for errors )
  */
-void ioblock_update_fill( ioblock* block, size_t bytes, char bad_data ) {
+void ioblock_update_fill(ioblock *block, size_t bytes, char bad_data)
+{
    block->data_size += bytes;
    // if we have errors, we need to track them
-   if ( bad_data ) {
+   if (bad_data)
+   {
       block->error_end = block->data_size;
    }
 }
-
 
 /**
  * Overwrites data size and error offset information for a given ioblock
@@ -429,42 +451,42 @@ void ioblock_update_fill( ioblock* block, size_t bytes, char bad_data ) {
  * @param size_t bytes : Data size for this ioblock
  * @param off_t error_end : Offset of the final data error for this block
  */
-void ioblock_overwrite_fill( ioblock* block, size_t bytes, off_t error_end ) {
+void ioblock_overwrite_fill(ioblock *block, size_t bytes, off_t error_end)
+{
    block->data_size = bytes;
    block->error_end = error_end;
 }
-
 
 /**
  * Get the current data size written to the ioblock
  * @param ioblock* block : Reference to the ioblock to update
  * @return size_t : Data size of the ioblock
  */
-size_t ioblock_get_fill( ioblock* block ) {
+size_t ioblock_get_fill(ioblock *block)
+{
    return block->data_size;
 }
-
 
 /**
  * Simply makes an ioblock available for use again by increasing ioqueue depth (works due to single producer & consumer assumption)
  * @param ioqueue* ioq : Reference to the ioqueue struct to have depth increased
  * @param int : Zero on success and a negative value if an error occurred
  */
-int release_ioblock( ioqueue* ioq ) {
-   if ( pthread_mutex_lock(&ioq->qlock) ) { // aquire the queue lock
-      LOG( LOG_ERR, "Failed to aquire ioqueue lock!\n" );
+int release_ioblock(ioqueue *ioq)
+{
+   if (pthread_mutex_lock(&ioq->qlock))
+   { // aquire the queue lock
+      LOG(LOG_ERR, "Failed to aquire ioqueue lock!\n");
       return -1;
    }
-   if ( ioq->depth == SUPER_BLOCK_CNT ) {
-      LOG( LOG_ERR, "No outstanding ioblocks to be released!\n" );
+   if (ioq->depth == SUPER_BLOCK_CNT)
+   {
+      LOG(LOG_ERR, "No outstanding ioblocks to be released!\n");
       return -1;
    }
    ioq->depth++;
-   LOG( LOG_INFO, "%d out of %d ioblocks available\n", ioq->depth, SUPER_BLOCK_CNT );
+   LOG(LOG_INFO, "%d out of %d ioblocks available\n", ioq->depth, SUPER_BLOCK_CNT);
    pthread_cond_signal(&ioq->avail_block);
    pthread_mutex_unlock(&ioq->qlock);
    return 0;
 }
-
-
-
