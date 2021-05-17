@@ -188,7 +188,16 @@ DAL fuzzing_dal_init(xmlNode *fuzzing_dal_conf_root, DAL_location max_loc);
 DAL s3_dal_init(xmlNode *s3_dal_conf_root, DAL_location max_loc);
 DAL azure_dal_init(xmlNode *azure_dal_conf_root, DAL_location max_loc);
 
-// Function to provide specific DAL initialization calls based on name
-DAL init_dal(xmlNode *dal_conf_root, DAL_location max_loc); // {
+#if defined(__cplusplus)
+extern "C"
+{
+#endif
+
+   // Function to provide specific DAL initialization calls based on name
+   DAL init_dal(xmlNode *dal_conf_root, DAL_location max_loc);
+
+#if defined(__cplusplus)
+}
+#endif
 
 #endif

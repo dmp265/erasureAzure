@@ -124,8 +124,8 @@ int main(int argc, char **argv)
    {
       printf("warning: put did not return expected value %d\n", res);
    }
-   char *meta_val = (char *)"this is a meta value!";
-   if (dal->set_meta(block, meta_val, strlen(meta_val)))
+   char *meta_val = (char *)"this is a meta value!\n";
+   if (dal->set_meta(block, meta_val, strlen(meta_val) + 1))
    {
       printf("warning: set_meta did not return expected value\n");
    }
@@ -157,7 +157,7 @@ int main(int argc, char **argv)
       printf("warning: retrieved data does not match written!\n");
    }
    int ret = dal->get_meta(block, (char *)readbuffer, (10 * 1024));
-   if (ret != (signed)strlen(meta_val))
+   if (ret != (signed)strlen(meta_val) + 1)
    {
       printf("warning: get_meta returned an unexpected value (%d %d) %s\n", ret, (int)strlen(meta_val), (char *)readbuffer);
    }

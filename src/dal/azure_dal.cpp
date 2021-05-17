@@ -17,7 +17,7 @@
 
 //   -------------    AZURE DEFINITIONS    -------------
 
-#define IO_SIZE (5 << 20)    // Preferred I/O Size: 5M
+#define IO_SIZE (1 << 30)    // Preferred I/O Size: 1G
 #define NO_OBJID "noneGiven" // Substitute ID when none is provided
 
 //   -------------    AZURE CONTEXT    -------------
@@ -31,6 +31,8 @@ typedef struct azure_block_context_struct
   azure::storage::cloud_block_blob blob;
   std::vector<azure::storage::block_list_item> block_list;
   char *m_buf;
+  DAL_location loc;
+  char *objID;
 } * AZURE_BLOCK_CTXT;
 
 typedef struct azure_dal_context_struct
@@ -75,6 +77,26 @@ static int num_digits(int value)
   }
   // only support values up to 5 digits long
   return -1;
+}
+
+static char *mode_str(DAL_MODE mode)
+{
+  switch (mode)
+  {
+  case DAL_READ:
+    return (char *)"DAL_READ";
+    break;
+  case DAL_WRITE:
+    return (char *)"DAL_WRITE";
+    break;
+  case DAL_REBUILD:
+    return (char *)"DAL_REBUILD";
+    break;
+  case DAL_METAREAD:
+    return (char *)"DAL_METAREAD";
+    break;
+  }
+  return (char *)"INVALID MODE";
 }
 
 //   -------------    S3 IMPLEMENTATION    -------------
@@ -265,6 +287,8 @@ BLOCK_CTXT azure_open(DAL_CTXT ctxt, DAL_MODE mode, DAL_location location, const
   bctxt->mode = mode;
   bctxt->next_id = 0;
   bctxt->block_list.clear();
+  bctxt->objID = strdup(objID);
+  bctxt->loc = location;
 
   if (mode == DAL_READ)
   {
@@ -342,12 +366,18 @@ ssize_t azure_get_meta(BLOCK_CTXT ctxt, char *meta_buf, size_t size)
   }
   catch (const std::exception &e)
   {
-    fprintf(stderr, "Error (azure_get_meta): %s\n", e.what());
+    fprintf(stderr, "Error (azure_get_meta): [%s (%d %d %d %d) %s] %s\n", bctxt->objID, bctxt->loc.pod, bctxt->loc.block, bctxt->loc.cap, bctxt->loc.scatter, mode_str(bctxt->mode), e.what());
     fflush(stderr);
     return -1;
   }
 
-  return strlen(meta_buf);
+  // Add a newline to the end of the metadata if we have room
+  if (strlen(meta_buf) < size)
+  {
+    strcat(meta_buf, "\n\0");
+  }
+
+  return strlen(meta_buf) + 1;
 }
 
 int azure_put(BLOCK_CTXT ctxt, const void *buf, size_t size)
@@ -426,6 +456,7 @@ int azure_abort(BLOCK_CTXT ctxt)
 
   // Do not commit any data. Uncommitted blocks should be garbage collected eventually...?
 
+  delete bctxt->objID;
   delete bctxt;
   return 0;
 }
@@ -475,6 +506,7 @@ int azure_close(BLOCK_CTXT ctxt)
       delete bctxt->m_buf;
     }
   }
+  delete bctxt->objID;
   delete bctxt;
   return 0;
 }

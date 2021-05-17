@@ -1285,7 +1285,7 @@ int posix_put(BLOCK_CTXT ctxt, const void *buf, size_t size)
       return -1;
    }
 
-   return size;
+   return 0;
 }
 
 ssize_t posix_get(BLOCK_CTXT ctxt, void *buf, size_t size, off_t offset)

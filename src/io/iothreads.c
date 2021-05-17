@@ -122,8 +122,10 @@ underlying skt_etc() functions.
 #include <errno.h>
 #include <assert.h>
 #include <pthread.h>
+#include <isa-l/crc.h>
 
-/* The following are defined here, so as to hide them from users of the library */
+/*
+// The following are defined here, so as to hide them from users of the library
 // erasure functions
 #ifdef HAVE_LIBISAL
 extern uint32_t crc32_ieee(uint32_t seed, uint8_t *buf, uint64_t len);
@@ -132,7 +134,7 @@ extern void ec_encode_data(int len, int srcs, int dests, unsigned char *v, unsig
 extern uint32_t crc32_ieee_base(uint32_t seed, uint8_t *buf, uint64_t len);
 extern void ec_encode_data_base(int len, int srcs, int dests, unsigned char *v, unsigned char **src, unsigned char **dest);
 #endif
-
+*/
 /* ------------------------------   THREAD BEHAVIOR FUNCTIONS   ------------------------------ */
 
 /**

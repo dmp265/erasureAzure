@@ -11,7 +11,7 @@ SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR ASSUMES ANY LIABILITY
 FOR THE USE OF THIS SOFTWARE.  If software is modified to produce derivative
 works, such modified software should be clearly marked, so as not to confuse it
 with the version available from LANL.
- 
+
 Additionally, redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
 1. Redistributions of source code must retain the above copyright notice, this
@@ -58,7 +58,6 @@ LANL contributions is found at https://github.com/jti-lanl/aws4c.
 GNU licenses can be found at http://www.gnu.org/licenses/.
 */
 
-
 #include "io/io.h"
 #include "dal/dal.h"
 #include "io/testing/bufferfuncs.c"
@@ -66,11 +65,10 @@ GNU licenses can be found at http://www.gnu.org/licenses/.
 #include <unistd.h>
 #include <stdio.h>
 
-
-int main( int argc, char** argv ) {
+int main(int argc, char **argv)
+{
    xmlDoc *doc = NULL;
    xmlNode *root_element = NULL;
-
 
    /*
    * this initialize the library and check potential ABI mismatches
@@ -82,17 +80,18 @@ int main( int argc, char** argv ) {
    /*parse the file and get the DOM */
    doc = xmlReadFile("./testing/config.xml", NULL, XML_PARSE_NOBLANKS);
 
-   if (doc == NULL) {
-     printf("error: could not parse file %s\n", "./dal/testing/config.xml");
-     return -1;
+   if (doc == NULL)
+   {
+      printf("error: could not parse file %s\n", "./dal/testing/config.xml");
+      return -1;
    }
 
    /*Get the root element node */
    root_element = xmlDocGetRootElement(doc);
 
    // Initialize a posix dal instance
-   DAL_location maxloc = { .pod = 1, .block = 1, .cap = 1, .scatter = 1 };
-   DAL dal = init_dal( root_element, maxloc );
+   DAL_location maxloc = {.pod = 1, .block = 1, .cap = 1, .scatter = 1};
+   DAL dal = init_dal(root_element, maxloc);
 
    /* Free the xml Doc */
    xmlFreeDoc(doc);
@@ -103,17 +102,17 @@ int main( int argc, char** argv ) {
    xmlCleanupParser();
 
    // check that initialization succeeded
-   if ( dal == NULL ) {
-      printf( "error: failed to initialize DAL: %s\n", strerror(errno) );
+   if (dal == NULL)
+   {
+      printf("error: failed to initialize DAL: %s\n", strerror(errno));
       return -1;
    }
 
-
    // Test WRITE thread logic
-   
+
    // create a global state struct
    gthread_state gstate;
-   gstate.objID = "";
+   gstate.objID = (char *)"";
    gstate.location = maxloc;
    gstate.dmode = DAL_WRITE;
    gstate.dal = dal;
@@ -130,119 +129,133 @@ int main( int argc, char** argv ) {
    gstate.data_error = 0;
 
    // create an ioqueue for our data blocks
-   gstate.ioq = create_ioqueue( gstate.minfo.versz, gstate.minfo.partsz, gstate.dmode );
-   if ( gstate.ioq == NULL ) {
-      printf( "Failed to create IOQueue for write thread!\n" );
+   gstate.ioq = create_ioqueue(gstate.minfo.versz, gstate.minfo.partsz, gstate.dmode);
+   if (gstate.ioq == NULL)
+   {
+      printf("Failed to create IOQueue for write thread!\n");
       return -1;
    }
 
    // create a thread state reference
-   void* tstate;
+   void *tstate;
 
    // run our write_init function
-   printf( "initializing write thread state..." );
-   if ( write_init( 0, (void*)&gstate, &tstate ) ) {
-      printf( "write_init() function failed!\n" );
+   printf("initializing write thread state...");
+   if (write_init(0, (void *)&gstate, &tstate))
+   {
+      printf("write_init() function failed!\n");
       return -1;
    }
-   printf( "done\n" );
+   printf("done\n");
 
    // loop through writing out our test data
    int partcnt = 0;
    int partlimit = 10;
-   ioblock* iob = NULL;
-   ioblock* pblock = NULL;
-   while ( partcnt < partlimit ) {
+   ioblock *iob = NULL;
+   ioblock *pblock = NULL;
+   while (partcnt < partlimit)
+   {
       int resres = 0;
-      while ( (resres = reserve_ioblock( &iob, &pblock, gstate.ioq )) == 0 ) {
+      while ((resres = reserve_ioblock(&iob, &pblock, gstate.ioq)) == 0)
+      {
          // get a target for our buffer
-         void* fill_tgt = ioblock_write_target( iob );
-         if ( fill_tgt == NULL ) {
-            printf( "Failed to get fill target for ioblock!\n" );
+         void *fill_tgt = ioblock_write_target(iob);
+         if (fill_tgt == NULL)
+         {
+            printf("Failed to get fill target for ioblock!\n");
             return -1;
          }
 
          // fill our ioblock
-         size_t fill_sz = fill_buffer( partcnt * gstate.minfo.partsz, gstate.minfo.versz, gstate.minfo.partsz, fill_tgt, gstate.dmode );
-         if ( fill_sz != gstate.minfo.partsz ) {
-            printf( "Expected to fill %zu bytes, but instead filled %zu\n", gstate.minfo.partsz, fill_sz );
+         size_t fill_sz = fill_buffer(partcnt * gstate.minfo.partsz, gstate.minfo.versz, gstate.minfo.partsz, fill_tgt, gstate.dmode);
+         if ((signed)fill_sz != gstate.minfo.partsz)
+         {
+            printf("Expected to fill %zu bytes, but instead filled %zu\n", gstate.minfo.partsz, fill_sz);
             return -1;
          }
-         ioblock_update_fill( iob, fill_sz, 0 );
+         ioblock_update_fill(iob, fill_sz, 0);
          partcnt++;
       }
       // check for an error condition forcing loop exit
-      if ( resres < 0 ) {
-         printf( "An error occured while trying to reserve a new IOBlock for writing\n" );
+      if (resres < 0)
+      {
+         printf("An error occured while trying to reserve a new IOBlock for writing\n");
          return -1;
       }
 
       // otherwise, pblock should now be populated, run our write_consume function
-      printf( "consuming ioblock..." );
-      if ( write_consume( &tstate, (void**) &pblock ) ) {
-         printf( "write_consume() function indicates an error!\n" );
+      printf("consuming ioblock...");
+      if (write_consume(&tstate, (void **)&pblock))
+      {
+         printf("write_consume() function indicates an error!\n");
          return -1;
       }
-      printf( "done\n" );
+      printf("done\n");
       pblock = NULL;
    }
 
    // check if any data made it into our current ioblock
-   if ( ioblock_get_fill( iob ) ) {
+   if (ioblock_get_fill(iob))
+   {
       // if so, consume it as well
-      printf( "consuming final ioblock..." );
-      if ( write_consume( &tstate, (void**) &pblock ) ) {
-         printf( "write_consume() function indicates an error!\n" );
+      printf("consuming final ioblock...");
+      if (write_consume(&tstate, (void **)&pblock))
+      {
+         printf("write_consume() function indicates an error!\n");
          return -1;
       }
-      printf( "done\n" );
+      printf("done\n");
    }
-   else {
+   else
+   {
       // otherwise, we'll need to release it
-      release_ioblock( gstate.ioq );
+      release_ioblock(gstate.ioq);
    }
 
    // set some of our minfo values
-   gstate.minfo.totsz = ( partcnt * gstate.minfo.partsz );
+   gstate.minfo.totsz = (partcnt * gstate.minfo.partsz);
 
    // finally, call our write thread termination function
-   printf( "terminating write state..." );
-   write_term( &tstate, (void**) &pblock );
-   printf( "done\n" );
+   printf("terminating write state...");
+   write_term(&tstate, (void **)&pblock);
+   printf("done\n");
 
    // check for any write errors
-   if( gstate.meta_error ) {
-      printf( "Write thread global state indicates a meta error was encountered!\n" );
+   if (gstate.meta_error)
+   {
+      printf("Write thread global state indicates a meta error was encountered!\n");
    }
-   if ( gstate.data_error ) {
-      printf( "Write thread global state indicates a data error was encountered!\n" );
+   if (gstate.data_error)
+   {
+      printf("Write thread global state indicates a data error was encountered!\n");
    }
-
-
 
    // Test READ thread logic
 
    // fix our state values
    gstate.dmode = DAL_READ;
    gstate.offset = 0;
-   if ( destroy_ioqueue( gstate.ioq ) ) {
-      printf( "Failed to destroy write IOQueue!\n" );
+   if (destroy_ioqueue(gstate.ioq))
+   {
+      printf("Failed to destroy write IOQueue!\n");
    }
    gstate.ioq = NULL;
    tstate = NULL;
 
    // call our read_init function
-   printf( "Initializing our read thread state..." );
-   if ( read_init( 0, (void**) &gstate, &tstate ) ) {
-      printf( "Failure of the read_init() function!\n" );
+   printf("Initializing our read thread state...");
+   if (read_init(0, (void **)&gstate, &tstate))
+   {
+      printf("Failure of the read_init() function!\n");
       return -1;
    }
-   printf( "done\n" );
+   printf("done\n");
 
    // create our ioqueue (based on minfo values gathered by the read thread)
-   gstate.ioq = create_ioqueue( gstate.minfo.versz, gstate.minfo.partsz, gstate.dmode );
-   if ( gstate.ioq == NULL ) {
-      printf( "Failed to create ioqueue for read!\n" );
+   gstate.ioq = create_ioqueue(gstate.minfo.versz, gstate.minfo.partsz, gstate.dmode);
+   if (gstate.ioq == NULL)
+   {
+      printf("Failed to create ioqueue for read!\n");
       return -1;
    }
 
@@ -251,98 +264,109 @@ int main( int argc, char** argv ) {
    int prodres;
    int readparts = 0;
    iob = NULL;
-   printf( "Producing a new read ioblock..." );
-   while ( (prodres = read_produce( &tstate, (void**) &iob )) == 0 ) {
-      printf( "done\n" );
+   printf("Producing a new read ioblock...");
+   while ((prodres = read_produce(&tstate, (void **)&iob)) == 0)
+   {
+      printf("done\n");
       // get a read target
       size_t buffsz = 0;
-      void* readtgt = ioblock_read_target( iob, &buffsz, NULL );
-      if ( readtgt == NULL ) {
-         printf( "Failed to get read target for produced ioblock!\n" );
+      void *readtgt = ioblock_read_target(iob, &buffsz, NULL);
+      if (readtgt == NULL)
+      {
+         printf("Failed to get read target for produced ioblock!\n");
          return -1;
       }
       // verify all data in our ioblock
-      if ( verify_data( readparts * gstate.minfo.partsz, gstate.minfo.partsz, buffsz, readtgt, DAL_READ ) != 
-            buffsz ) {
-         printf( "Failed to verify all data from produced ioblock!\n" );
+      if (verify_data(readparts * gstate.minfo.partsz, gstate.minfo.partsz, buffsz, readtgt, DAL_READ) !=
+          buffsz)
+      {
+         printf("Failed to verify all data from produced ioblock!\n");
          return -1;
       }
       // release our produced ioblock
-      if ( release_ioblock( gstate.ioq ) ) {
-         printf( "Failed to release ioblock!\n" );
+      if (release_ioblock(gstate.ioq))
+      {
+         printf("Failed to release ioblock!\n");
          return -1;
       }
       // NULL out our ioblock reference
       iob = NULL;
       // count how many parts we verified
-      readparts += ( buffsz / gstate.minfo.partsz );
-      if ( buffsz % gstate.minfo.partsz ) {
-         printf( "WARNING: read buffer size (%zu) does not align with partsz (%zu)!\n", buffsz, gstate.minfo.partsz );
+      readparts += (buffsz / gstate.minfo.partsz);
+      if (buffsz % gstate.minfo.partsz)
+      {
+         printf("WARNING: read buffer size (%zu) does not align with partsz (%zu)!\n", buffsz, gstate.minfo.partsz);
       }
-      printf( "Producing a new read ioblock..." );
+      printf("Producing a new read ioblock...");
    }
-   if ( prodres < 0 ) {
-      printf( "read_produce indicates an error!\n" );
+   if (prodres < 0)
+   {
+      printf("read_produce indicates an error!\n");
       return -1;
    }
-   printf( "all reads complete\n" );
+   printf("all reads complete\n");
 
    // call our read term func
-   printf( "Terminating read thread state..." );
-   read_term( &tstate, (void**) &iob );
-   printf( "done\n" );
-
+   printf("Terminating read thread state...");
+   read_term(&tstate, (void **)&iob);
+   printf("done\n");
 
    // CLEANUP
 
    // WE still need to destroy the read thread ioqueue
-   if ( destroy_ioqueue( gstate.ioq ) ) {
-      printf( "Failed to destroy read ioqueue!\n" );
+   if (destroy_ioqueue(gstate.ioq))
+   {
+      printf("Failed to destroy read ioqueue!\n");
       return -1;
    }
 
    // Delete the block we created
-   if ( dal->del( dal->ctxt, maxloc, "" ) ) { printf( "warning: del failed!\n" ); }
+   if (dal->del(dal->ctxt, maxloc, ""))
+   {
+      printf("warning: del failed!\n");
+   }
 
    // Free the DAL
-   if ( dal->cleanup( dal ) ) { printf( "error: failed to cleanup DAL\n" ); return -1; }
+   if (dal->cleanup(dal))
+   {
+      printf("error: failed to cleanup DAL\n");
+      return -1;
+   }
 
    // Finally, compare our structs
-//   int retval=0;
-//   if ( minfo_ref.N != minfo_fill.N ) {
-//      printf( "error: set (%d) and retrieved (%d) meta info 'N' values do not match!\n", minfo_ref.N, minfo_fill.N );
-//      retval=-1;
-//   }
-//   if ( minfo_ref.E != minfo_fill.E ) {
-//      printf( "error: set (%d) and retrieved (%d) meta info 'E' values do not match!\n", minfo_ref.E, minfo_fill.E );
-//      retval=-1;
-//   }
-//   if ( minfo_ref.O != minfo_fill.O ) {
-//      printf( "error: set (%d) and retrieved (%d) meta info 'O' values do not match!\n", minfo_ref.O, minfo_fill.O );
-//      retval=-1;
-//   }
-//   if ( minfo_ref.partsz != minfo_fill.partsz ) {
-//      printf( "error: set (%zd) and retrieved (%zd) meta info 'partsz' values do not match!\n", minfo_ref.partsz, minfo_fill.partsz );
-//      retval=-1;
-//   }
-//   if ( minfo_ref.versz != minfo_fill.versz ) {
-//      printf( "error: set (%zd) and retrieved (%zd) meta info 'versz' values do not match!\n", minfo_ref.versz, minfo_fill.versz );
-//      retval=-1;
-//   }
-//   if ( minfo_ref.blocksz != minfo_fill.blocksz ) {
-//      printf( "error: set (%zd) and retrieved (%zd) meta info 'blocksz' values do not match!\n", minfo_ref.blocksz, minfo_fill.blocksz );
-//      retval=-1;
-//   }
-//   if ( minfo_ref.crcsum != minfo_fill.crcsum ) {
-//      printf( "error: set (%lld) and retrieved (%lld) meta info 'crcsum' values do not match!\n", minfo_ref.crcsum, minfo_fill.crcsum );
-//      retval=-1;
-//   }
-//   if ( minfo_ref.totsz != minfo_fill.totsz ) {
-//      printf( "error: set (%zd) and retrieved (%zd) meta info 'totsz' values do not match!\n", minfo_ref.totsz, minfo_fill.totsz );
-//      retval=-1;
-//   }
+   //   int retval=0;
+   //   if ( minfo_ref.N != minfo_fill.N ) {
+   //      printf( "error: set (%d) and retrieved (%d) meta info 'N' values do not match!\n", minfo_ref.N, minfo_fill.N );
+   //      retval=-1;
+   //   }
+   //   if ( minfo_ref.E != minfo_fill.E ) {
+   //      printf( "error: set (%d) and retrieved (%d) meta info 'E' values do not match!\n", minfo_ref.E, minfo_fill.E );
+   //      retval=-1;
+   //   }
+   //   if ( minfo_ref.O != minfo_fill.O ) {
+   //      printf( "error: set (%d) and retrieved (%d) meta info 'O' values do not match!\n", minfo_ref.O, minfo_fill.O );
+   //      retval=-1;
+   //   }
+   //   if ( minfo_ref.partsz != minfo_fill.partsz ) {
+   //      printf( "error: set (%zd) and retrieved (%zd) meta info 'partsz' values do not match!\n", minfo_ref.partsz, minfo_fill.partsz );
+   //      retval=-1;
+   //   }
+   //   if ( minfo_ref.versz != minfo_fill.versz ) {
+   //      printf( "error: set (%zd) and retrieved (%zd) meta info 'versz' values do not match!\n", minfo_ref.versz, minfo_fill.versz );
+   //      retval=-1;
+   //   }
+   //   if ( minfo_ref.blocksz != minfo_fill.blocksz ) {
+   //      printf( "error: set (%zd) and retrieved (%zd) meta info 'blocksz' values do not match!\n", minfo_ref.blocksz, minfo_fill.blocksz );
+   //      retval=-1;
+   //   }
+   //   if ( minfo_ref.crcsum != minfo_fill.crcsum ) {
+   //      printf( "error: set (%lld) and retrieved (%lld) meta info 'crcsum' values do not match!\n", minfo_ref.crcsum, minfo_fill.crcsum );
+   //      retval=-1;
+   //   }
+   //   if ( minfo_ref.totsz != minfo_fill.totsz ) {
+   //      printf( "error: set (%zd) and retrieved (%zd) meta info 'totsz' values do not match!\n", minfo_ref.totsz, minfo_fill.totsz );
+   //      retval=-1;
+   //   }
 
    return 0;
 }
-
-

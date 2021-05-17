@@ -123,8 +123,8 @@ int main(int argc, char **argv)
    {
       printf("warning: put did not return expected value\n");
    }
-   char *meta_val = (char *)"this is a meta value!";
-   if (dal->set_meta(block, meta_val, 22))
+   char *meta_val = (char *)"this is a meta value!\n";
+   if (dal->set_meta(block, meta_val, (signed)strlen(meta_val) + 1))
    {
       printf("warning: set_meta did not return expected value\n");
    }
@@ -155,11 +155,11 @@ int main(int argc, char **argv)
    {
       printf("warning: retrieved data does not match written!\n");
    }
-   if (dal->get_meta(block, (char *)readbuffer, (10 * 1024)) != (signed)strlen(meta_val))
+   if (dal->get_meta(block, (char *)readbuffer, (10 * 1024)) != (signed)strlen(meta_val) + 1)
    {
       printf("warning: get_meta returned an unexpected value\n");
    }
-   if (strncmp(meta_val, (char *)readbuffer, 22))
+   if (strncmp(meta_val, (char *)readbuffer, (signed)strlen(meta_val) + 1))
    {
       printf("warning: retrieved meta value does not match written!\n");
    }
@@ -200,11 +200,11 @@ int main(int argc, char **argv)
    {
       printf("warning: retrieved data does not match written!\n");
    }
-   if (dal->get_meta(blockA, (char *)readbuffer, (10 * 1024)) != (signed)strlen(meta_val))
+   if (dal->get_meta(blockA, (char *)readbuffer, (10 * 1024)) != (signed)strlen(meta_val) + 1)
    {
       printf("warning: get_meta returned an unexpected value\n");
    }
-   if (strncmp(meta_val, (char *)readbuffer, 22))
+   if (strncmp(meta_val, (char *)readbuffer, (signed)strlen(meta_val) + 1))
    {
       printf("warning: retrieved meta value does not match written!\n");
    }
@@ -238,11 +238,11 @@ int main(int argc, char **argv)
    {
       printf("warning: blockA retrieved data does not match written!\n");
    }
-   if (dal->get_meta(blockA, (char *)readbuffer, (10 * 1024)) != (signed)strlen(meta_val))
+   if (dal->get_meta(blockA, (char *)readbuffer, (10 * 1024)) != (signed)strlen(meta_val) + 1)
    {
       printf("warning: blockA get_meta returned an unexpected value\n");
    }
-   if (strncmp(meta_val, (char *)readbuffer, 22))
+   if (strncmp(meta_val, (char *)readbuffer, (signed)strlen(meta_val) + 1))
    {
       printf("warning: blockA retrieved meta value does not match written!\n");
    }
@@ -267,11 +267,11 @@ int main(int argc, char **argv)
    {
       printf("warning: blockB retrieved data does not match written!\n");
    }
-   if (dal->get_meta(blockB, (char *)readbuffer, (10 * 1024)) != (signed)strlen(meta_val))
+   if (dal->get_meta(blockB, (char *)readbuffer, (10 * 1024)) != (signed)strlen(meta_val) + 1)
    {
       printf("warning: blockB get_meta returned an unexpected value\n");
    }
-   if (strncmp(meta_val, (char *)readbuffer, 22))
+   if (strncmp(meta_val, (char *)readbuffer, (signed)strlen(meta_val) + 1))
    {
       printf("warning: blockB retrieved meta value does not match written!\n");
    }

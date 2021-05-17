@@ -1410,7 +1410,7 @@ ne_handle ne_convert_handle(ne_handle handle, ne_mode mode)
       meta_info consensus;
       int match_count = check_matches(minforefs, meta_count, handle->epat.N + handle->epat.E, &consensus);
       free(minforefs); // now unneeded
-      LOG(LOG_INFO, "Got consensus values (N=%d,E=%d,O=%d,partsz=%zd,versz=%zd,blocksz=%zd,totsz=%zd)\n",
+      LOG(LOG_ERR, "Got consensus values (N=%d,E=%d,O=%d,partsz=%zd,versz=%zd,blocksz=%zd,totsz=%zd)\n",
           consensus.N, consensus.E, consensus.O, consensus.partsz, consensus.versz, consensus.blocksz, consensus.totsz);
       if (match_count <= 0)
       {
@@ -1449,7 +1449,7 @@ ne_handle ne_convert_handle(ne_handle handle, ne_mode mode)
       {
          if (cmp_minfo(&(handle->thread_states[i].minfo), &(consensus)))
          {
-            LOG(LOG_WARNING, "Meta values of thread %d do not match consensus!\n", i);
+            LOG(LOG_ERR, "Meta values of thread %d do not match consensus!\n", i);
             handle->thread_states[i].meta_error = 1;
             cpy_minfo(&(handle->thread_states[i].minfo), &(consensus));
          }
@@ -1556,6 +1556,7 @@ ne_handle ne_open(ne_ctxt ctxt, const char *objID, ne_location loc, ne_erasure e
    if (handle == NULL)
    {
       LOG(LOG_ERR, "Failed to create an ne_handle!\n");
+      fflush(stderr);
       return NULL;
    }
 
@@ -1564,6 +1565,7 @@ ne_handle ne_open(ne_ctxt ctxt, const char *objID, ne_location loc, ne_erasure e
    if (converted_handle == NULL)
    {
       LOG(LOG_ERR, "Failed to convert handle to appropriate mode!\n");
+      fflush(stderr);
       free_handle(handle);
       return NULL;
    }

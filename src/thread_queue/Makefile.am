@@ -10,7 +10,7 @@
 #FOR THE USE OF THIS SOFTWARE.  If software is modified to produce derivative
 #works, such modified software should be clearly marked, so as not to confuse it
 #with the version available from LANL.
-# 
+#
 #Additionally, redistribution and use in source and binary forms, with or without
 #modification, are permitted provided that the following conditions are met:
 #1. Redistributions of source code must retain the above copyright notice, this
@@ -72,7 +72,7 @@ libTQ_la_SOURCES = thread_queue.c
 TQ_LIB = libTQ.la
 
 # ---
-check_PROGRAMS = test_threadqueue test_threadqueue_enqueue test_threadqueue_getopts test_threadqueue_getflags test_threadqueue_noprod test_threadqueue_nocons test_threadqueue_mastercons test_threadqueue_masterprod
+check_PROGRAMS = test_threadqueue #test_threadqueue_enqueue test_threadqueue_getopts test_threadqueue_getflags test_threadqueue_noprod test_threadqueue_nocons test_threadqueue_mastercons test_threadqueue_masterprod
 
 
 test_threadqueue_SOURCES = testing/test_threadqueue.c
@@ -99,6 +99,6 @@ test_threadqueue_mastercons_LDADD = $(TQ_LIB) $(SIDE_LIBS)
 test_threadqueue_masterprod_SOURCES = testing/test_threadqueue_masterprod.c
 test_threadqueue_masterprod_LDADD = $(TQ_LIB) $(SIDE_LIBS)
 
-TESTS = test_threadqueue test_threadqueue_enqueue test_threadqueue_getopts test_threadqueue_getflags test_threadqueue_noprod test_threadqueue_nocons test_threadqueue_mastercons test_threadqueue_masterprod
+TESTS = test_threadqueue #test_threadqueue_enqueue test_threadqueue_getopts test_threadqueue_getflags test_threadqueue_noprod test_threadqueue_nocons test_threadqueue_mastercons test_threadqueue_masterprod
 
 

@@ -59,5 +59,5 @@
 -->
 
 <DAL type="azure">
-   <connection_string>DefaultEndpointsProtocol=https;AccountName=erasureutilsdmp265;AccountKey=xF69ObHCUGJnfIHeVaivOKlt/wqd6BBANIuyc0B2aNCp5ENTFFlVe6DwrfkyxePkynM0ZWKopY1GfaUj2M5xXw==;EndpointSuffix=core.windows.net</connection_string>
+   <connection_string>DefaultEndpointsProtocol=https;AccountName=erasureutilsdmp265;AccountKey=0rtuttp6FeCM9iJiEwaAQCM+D+J9got5dNGh9DorPBy9IAduNTdXMfw2bJw25L24sjYixOfIaX24om9PixA2iw==;EndpointSuffix=core.windows.net</connection_string>
 </DAL>
