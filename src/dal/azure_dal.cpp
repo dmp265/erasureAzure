@@ -17,7 +17,7 @@
 
 //   -------------    AZURE DEFINITIONS    -------------
 
-#define IO_SIZE (1 << 30)    // Preferred I/O Size: 1G
+#define IO_SIZE (100 << 20)  // Preferred I/O Size: 1G
 #define NO_OBJID "noneGiven" // Substitute ID when none is provided
 
 //   -------------    AZURE CONTEXT    -------------
